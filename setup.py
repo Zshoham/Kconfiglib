@@ -37,6 +37,16 @@ setuptools.setup(
         "setconfig",
     ),
 
+    # Keep the CMake module and its script dependencies together for users
+    # installing Kconfiglib from a wheel or source distribution.
+    data_files=[
+        ("share/kconfiglib/cmake", ["cmake/Kconfig.cmake"]),
+        ("share/kconfiglib", [
+            "genconfig.py", "menuconfig.py", "guiconfig.py", "oldconfig.py",
+            "olddefconfig.py",
+        ]),
+    ],
+
     entry_points={
         "console_scripts": (
             "menuconfig = menuconfig:_main",

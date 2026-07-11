@@ -1,0 +1,29 @@
+config MODULES
+	bool
+	default y
+
+config ENABLED
+	bool
+	default y
+
+config DISABLED
+	bool "Disabled"
+
+config HIDDEN
+	bool
+
+config MODULE
+	tristate
+	default m
+
+config NUMBER
+	int
+	default 42
+
+config ADDRESS
+	hex
+	default 1000
+
+config TEXT
+	string "Text"
+	default "bracket]end;semi"

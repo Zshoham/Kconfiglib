@@ -119,7 +119,8 @@ available in the C tools.
 
 ``genconfig`` is intended to be run at build time. It generates a C header from
 the configuration and (optionally) information that can be used to rebuild only
-files that reference Kconfig symbols that have changed value.
+files that reference Kconfig symbols that have changed value. It can also
+generate a CMake include file with ``--cmake-out``.
 
 All utilities run under Python 3.
 
@@ -238,6 +239,54 @@ outdated ``.config``.
 
 If you use ``--sync-deps`` to generate incremental build information, you can
 include ``deps/auto.conf`` instead, which is also a full configuration file.
+
+Using the configuration from CMake
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pass ``--cmake-out <filename>`` to ``genconfig`` to generate a file containing
+CMake ``set()`` commands, then load it with ``include()``::
+
+  genconfig --cmake-out build/kconfig.cmake Kconfig
+
+  # CMakeLists.txt
+  include(${CMAKE_BINARY_DIR}/kconfig.cmake)
+  if(CONFIG_MY_FEATURE)
+    target_sources(my_target PRIVATE feature.c)
+  endif()
+
+The generated variables use the normal ``CONFIG_`` prefix, and the same
+symbols appear as in a generated ``.config`` file. Boolean and tristate
+values are ``y``, ``m``, or ``n``. Hex values get a ``0x`` prefix, matching
+the C header, and empty values are written as ``""`` so the variables are
+defined. Strings are safely represented as CMake bracket arguments,
+preserving semicolons, quotes, backslashes, and text such as ``${NAME}``
+without expansion. The generated file also defines ``KCONFIG_SYMBOLS``, a
+list of the exact names of all the variables it set (reflecting whatever
+symbol prefix was configured, not necessarily ``CONFIG_``).
+
+Projects can also use the includeable CMake wrapper shipped in the ``cmake``
+directory. Add that directory to ``CMAKE_MODULE_PATH`` and call
+``kconfig_configure()`` during project configuration::
+
+  list(APPEND CMAKE_MODULE_PATH "${KCONFIGLIB_SOURCE_DIR}/cmake")
+  include(Kconfig)
+  kconfig_configure(
+    KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
+    CONFIG "${CMAKE_BINARY_DIR}/.config")
+
+The wrapper generates the header and CMake variables in the build directory
+and imports the generated symbol variables (plus ``KCONFIG_SYMBOLS``) into
+the current CMake scope, so it works regardless of the configured symbol
+prefix. If the configuration file does not exist, it is created once with
+default values; an existing configuration file is used as input and is never
+rewritten by the configure step (the normalized, full configuration is
+written alongside the other generated files). The wrapper also adds a
+``kconfig_generate`` target, along with ``kconfig_menuconfig``,
+``kconfig_guiconfig``, ``kconfig_oldconfig``, and ``kconfig_olddefconfig``
+targets. The optional ``BINARY_DIR``, ``NAME``, and ``PYTHON_EXECUTABLE``
+arguments customize output paths, target names, and the Python interpreter.
+Changes to the configuration, or to any Kconfig file sourced by the top-level
+Kconfig, cause CMake to re-run automatically.
 
 Useful helper macros
 ~~~~~~~~~~~~~~~~~~~~

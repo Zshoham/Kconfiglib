@@ -140,6 +140,108 @@ Search the top-level Makefile for "Additional ARCH settings" to see other
 possibilities for ARCH and SRCARCH.
 
 
+Using Kconfiglib with CMake
+===========================
+
+To make Kconfig values available while configuring a CMake project, pass
+--cmake-out <filename> to genconfig.py and include the generated file from
+CMakeLists.txt:
+
+  $ python3 genconfig.py --cmake-out build/kconfig.cmake Kconfig
+
+  # CMakeLists.txt
+  include(${CMAKE_BINARY_DIR}/kconfig.cmake)
+  if(CONFIG_MY_FEATURE)
+    target_sources(my_target PRIVATE feature.c)
+  endif()
+
+The generated file contains CMake set() commands. Symbol variables normally
+use the CONFIG_ prefix, and boolean and tristate values are y, m, or n, which
+can be used directly in CMake conditions. The file also defines
+KCONFIG_SYMBOLS with the names of all generated symbol variables. Pass
+--header-path <filename> in the same genconfig.py invocation if the sources
+also need a C header.
+
+For tighter build-system integration, Kconfiglib ships cmake/Kconfig.cmake.
+Add that directory to CMAKE_MODULE_PATH, include the module, and call
+kconfig_configure() during CMake configuration:
+
+  list(APPEND CMAKE_MODULE_PATH "${KCONFIGLIB_SOURCE_DIR}/cmake")
+  include(Kconfig)
+  kconfig_configure(
+    KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
+    CONFIG "${CMAKE_BINARY_DIR}/.config")
+
+This generates a C header and a CMake include file in the build directory and
+imports all generated symbol variables into the calling scope. If .config does
+not exist, it is initialized with the default configuration. An existing
+.config is treated as input and is not overwritten during configuration.
+
+The wrapper provides the kconfig_generate, kconfig_menuconfig,
+kconfig_guiconfig, kconfig_oldconfig, and kconfig_olddefconfig targets. It also
+tracks the top-level Kconfig file, sourced Kconfig files, and .config so that
+CMake automatically reconfigures when any of them changes. The optional
+BINARY_DIR, NAME, and PYTHON_EXECUTABLE arguments customize the output
+directory, target-name prefix, and Python interpreter, respectively. The
+kconfig_init() function is an alias for kconfig_configure().
+
+First configure the project as usual. For example, with a build directory
+named build:
+
+  $ cmake -S . -B build
+
+The generated targets can then be run with ``cmake --build`` as described
+below. These commands work with any CMake generator, including Make and Ninja.
+
+
+cmake --build build --target kconfig_generate
+------------------------------------------------
+
+This target regenerates the C header, CMake include file, and normalized full
+configuration from .config. Normal project targets that use these generated
+files should depend on the target named by the KCONFIG_TARGET variable set by
+kconfig_configure().
+
+
+cmake --build build --target kconfig_menuconfig
+--------------------------------------------------
+
+This target opens the curses menuconfig interface. Save and exit to update the
+.config file passed to kconfig_configure(). CMake notices the change and
+reconfigures the project on the next build:
+
+  $ cmake --build build --target kconfig_menuconfig
+  $ cmake --build build
+
+
+cmake --build build --target kconfig_guiconfig
+-------------------------------------------------
+
+This target opens the Tkinter graphical configuration interface. Like
+kconfig_menuconfig, saving updates .config.
+
+
+cmake --build build --target kconfig_oldconfig
+------------------------------------------------
+
+This target updates an existing .config and prompts for values for any new
+symbols introduced since it was created.
+
+
+cmake --build build --target kconfig_olddefconfig
+---------------------------------------------------
+
+This target updates an existing .config without prompting, assigning default
+values to new symbols.
+
+The default target prefix is kconfig. Passing ``NAME myboard`` to
+kconfig_configure() changes the targets to myboard_generate,
+myboard_menuconfig, myboard_guiconfig, myboard_oldconfig, and
+myboard_olddefconfig. For example:
+
+  $ cmake --build build --target myboard_menuconfig
+
+
 Intro to symbol values
 ======================
 
@@ -1483,6 +1585,84 @@ class Kconfig(object):
 
                 add("#define {}{} {}\n"
                     .format(self.config_prefix, sym.name, val))
+
+        return "".join(chunks)
+
+    def write_cmake_config(self, filename):
+        r"""
+        Writes symbol values as CMake ``set()`` commands.
+
+        Each symbol that would appear in a full configuration (the same set of
+        symbols write_config() outputs) is emitted as a variable named after
+        the configured Kconfig prefix and symbol name. Boolean and tristate
+        values are written as ``y``, ``m``, or ``n``; these work naturally
+        with CMake's boolean expressions (``y`` is true and ``n`` is false).
+        Hex values get a ``0x`` prefix if they lack one, matching
+        write_autoconf(). Empty values are written as ``""`` so the variable
+        is defined rather than unset. String values use CMake bracket
+        arguments, which preserve quotes, backslashes, semicolons, and
+        variable-like text. Carriage returns cannot be preserved, as CMake
+        normalizes CRLF to LF when reading files (string values in Kconfig
+        and .config files never contain them).
+
+        A ``KCONFIG_SYMBOLS`` variable is emitted last, holding the list of
+        all variable names set by the file. This lets CMake code discover the
+        generated variables without knowing the configured prefix.
+
+        If *filename* already has the generated contents, it is left untouched
+        to avoid triggering unnecessary CMake reconfiguration or rebuilds.
+
+        Returns a string saying whether the file was saved or unchanged.
+        """
+        if self._write_if_changed(filename, self._cmake_config_contents()):
+            return "CMake configuration saved to '{}'".format(filename)
+        return "No change to CMake configuration in '{}'".format(filename)
+
+    def _cmake_config_contents(self):
+        chunks = ["# Generated by Kconfiglib. Do not edit.\n"]
+        add = chunks.append
+
+        names = []
+        for sym in self.unique_defined_syms:
+            # _write_to_conf is determined when the value is calculated. This
+            # is a hidden function call due to property magic.
+            val = sym.str_value
+            if not sym._write_to_conf:
+                continue
+
+            if sym.orig_type is STRING:
+                # Pick a bracket delimiter that neither appears in the value
+                # nor merges with the closing bracket when the value ends
+                # with ']' plus a prefix of the delimiter
+                equals = ""
+                while "]{}]".format(equals) in val or \
+                        val.endswith("]" + equals):
+                    equals += "="
+
+                if val.startswith(("\n", "\r")):
+                    # CMake drops a newline that immediately follows the
+                    # opening bracket. Add one for it to drop so that the
+                    # value's own leading newline survives.
+                    val = "\n" + val
+
+                val = "[{}[{}]{}]".format(equals, val, equals)
+
+            elif not val:
+                # set() with no value would unset the variable instead of
+                # defining it as empty
+                val = '""'
+
+            elif sym.orig_type is HEX and \
+                    not val.startswith(("0x", "0X")):
+                # Match write_autoconf(), which makes the value parse as hex
+                # in both C and CMake's math()
+                val = "0x" + val
+
+            name = self.config_prefix + sym.name
+            names.append(name)
+            add("set({} {})\n".format(name, val))
+
+        add('set(KCONFIG_SYMBOLS "{}")\n'.format(";".join(names)))
 
         return "".join(chunks)
 

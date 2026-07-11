@@ -10,6 +10,9 @@ format of include/generated/autoconf.h in the Linux kernel.
 Optionally, also writes the configuration output as a .config file. See
 --config-out.
 
+The configuration can also be written as a CMake include file. See
+--cmake-out.
+
 The --sync-deps, --file-list, and --env-list options generate information that
 can be used to avoid needless rebuilds/reconfigurations.
 
@@ -66,6 +69,15 @@ file even if .config is outdated. The generated configuration matches what
 olddefconfig would produce. If you use sync-deps, you can include
 deps/auto.conf instead. --config-out is meant for cases where incremental build
 information isn't needed.
+""")
+
+    parser.add_argument(
+        "--cmake-out",
+        metavar="CMAKE_FILE",
+        help="""
+Write the configuration as CMake set() commands to CMAKE_FILE. Including this
+file from CMake makes Kconfig symbols available as CONFIG_* variables. Boolean
+values work directly in if(CONFIG_FOO) expressions.
 """)
 
     parser.add_argument(
@@ -126,6 +138,9 @@ only supported for backwards compatibility).
 
     if args.config_out is not None:
         kconf.write_config(args.config_out, save_old=False)
+
+    if args.cmake_out is not None:
+        kconf.write_cmake_config(args.cmake_out)
 
     if args.sync_deps is not None:
         kconf.sync_deps(args.sync_deps)

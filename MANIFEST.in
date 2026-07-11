@@ -1,2 +1,3 @@
 # Include the license file in source distributions
 include LICENSE.txt
+recursive-include cmake *.cmake
