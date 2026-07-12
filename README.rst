@@ -291,13 +291,96 @@ Kconfig, cause CMake to re-run automatically.
 Useful helper macros
 ~~~~~~~~~~~~~~~~~~~~
 
-The `include/linux/kconfig.h
-<https://github.com/torvalds/linux/blob/master/include/linux/kconfig.h>`_
-header in the Linux kernel defines some useful helper macros for testing
-Kconfig configuration values.
+Kconfiglib ships ``kconfiglib.h`` for using Boolean and tristate
+configuration symbols in C and C preprocessor expressions. Include the
+generated configuration header first, then add the directory containing
+``kconfiglib.h`` to the compiler's include search path::
 
-``IS_ENABLED()`` is generally useful, allowing configuration values to be
-tested in ``if`` statements with no runtime overhead.
+  #include "config.h"
+  #include <kconfiglib.h>
+
+  if (KCONFIG_IS_ENABLED(CONFIG_MY_FEATURE))
+      start_my_feature();
+
+The header is installed in ``share/kconfiglib``. It exports these macros:
+
+``KCONFIG_IS_BUILTIN(CONFIG_FOO)``
+  Evaluates to ``1`` when ``CONFIG_FOO`` is ``y`` and to ``0`` otherwise.
+
+``KCONFIG_IS_MODULE(CONFIG_FOO)``
+  Evaluates to ``1`` when ``CONFIG_FOO`` is ``m`` and to ``0`` otherwise.
+
+``KCONFIG_IS_ENABLED(CONFIG_FOO)``
+  Evaluates to ``1`` when ``CONFIG_FOO`` is ``y`` or ``m`` and to ``0``
+  otherwise.
+
+``KCONFIG_TRISTATE(CONFIG_FOO)``
+  Evaluates to ``KCONFIG_TRISTATE_BUILTIN`` (``2``) for ``y``,
+  ``KCONFIG_TRISTATE_MODULE`` (``1``) for ``m``, and
+  ``KCONFIG_TRISTATE_DISABLED`` (``0``) for ``n``.
+
+``KCONFIG_IS_REACHABLE(CONFIG_FOO, CURRENT_MODULE)``
+  Evaluates to ``1`` when ``CONFIG_FOO`` is built in, or when it is a module
+  and ``CURRENT_MODULE`` expands to ``1``. Pass an undefined
+  ``CURRENT_MODULE`` macro for built-in compilation. This prevents built-in
+  objects from referencing APIs provided only by separately linked modules.
+
+``KCONFIG_SELECT_TRISTATE(CONFIG_FOO, (builtin_tokens), (module_tokens), (disabled_tokens))``
+  Emits only the parenthesized token sequence matching ``CONFIG_FOO``. The
+  outer parentheses are removed in the expansion, so branches may contain
+  declarations, initializer entries, or code with commas. Unlike an
+  ``if (KCONFIG_IS_ENABLED(...))`` statement, unselected branches are not
+  parsed or type-checked by the C compiler.
+
+  For example::
+
+    KCONFIG_SELECT_TRISTATE(CONFIG_DRIVER,
+        (register_builtin_driver();),
+        (register_module_driver();),
+        ())
+
+``KCONFIG_IF_BUILTIN(CONFIG_FOO, (tokens))``
+  Emits ``tokens`` only when ``CONFIG_FOO`` is ``y``. Use it for code that
+  must be linked into the main binary::
+
+    KCONFIG_IF_BUILTIN(CONFIG_TRACE,
+        (register_builtin_trace();))
+
+``KCONFIG_IF_MODULE(CONFIG_FOO, (tokens))``
+  Emits ``tokens`` only when ``CONFIG_FOO`` is ``m``. It is useful when
+  built-in and module builds need separate declarations or registrations::
+
+    KCONFIG_IF_MODULE(CONFIG_TRACE,
+        (register_module_trace();))
+
+``KCONFIG_IF_ENABLED(CONFIG_FOO, (tokens))``
+  Emits ``tokens`` when ``CONFIG_FOO`` is either ``y`` or ``m``. It is
+  equivalent to selecting the same token sequence for the built-in and module
+  branches::
+
+    KCONFIG_IF_ENABLED(CONFIG_DIAGNOSTICS,
+        (register_diagnostics();))
+
+  All wrappers emit nothing for an undefined or ``n`` symbol. Their second
+  argument must be enclosed in parentheses, and the parentheses are removed
+  in the expansion. Put statement semicolons inside those parentheses. This
+  also permits comma-containing declarations and initializer entries::
+
+    static const int modes[] = {
+        0,
+        KCONFIG_IF_ENABLED(CONFIG_DRIVER, (KCONFIG_TRISTATE(CONFIG_DRIVER),))
+    };
+
+  Token selection is intended for configuration-controlled declarations and
+  APIs that do not exist in every build. Prefer ``KCONFIG_IS_ENABLED()`` for
+  ordinary conditional execution, because both C branches then remain
+  type-checked. Macro arguments are expanded by the preprocessor before
+  selection.
+
+They work for undefined symbols as well: an absent configuration macro is
+treated as ``0``. The helpers are for Boolean and tristate symbols only; use
+the generated value macros directly for strings, integers, and hexadecimal
+values. They are C preprocessor expressions and introduce no runtime cost.
 
 Incremental building
 ~~~~~~~~~~~~~~~~~~~~

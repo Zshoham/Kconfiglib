@@ -42,8 +42,8 @@ setuptools.setup(
     data_files=[
         ("share/kconfiglib/cmake", ["cmake/Kconfig.cmake"]),
         ("share/kconfiglib", [
-            "genconfig.py", "menuconfig.py", "guiconfig.py", "oldconfig.py",
-            "olddefconfig.py",
+            "kconfiglib.h", "genconfig.py", "menuconfig.py", "guiconfig.py",
+            "oldconfig.py", "olddefconfig.py",
         ]),
     ],
 

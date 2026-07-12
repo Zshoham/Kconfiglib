@@ -2115,6 +2115,8 @@ CONFIG_MODULE;CONFIG_NUMBER;CONFIG_ADDRESS;CONFIG_TEXT")
 
     test_cmake_module()
 
+    test_c_config_helpers()
+
     # Test header strings in configuration files and headers
 
     os.environ["KCONFIG_CONFIG_HEADER"] = "config header from env.\n"
@@ -3315,6 +3317,192 @@ def verify_cmake_config(kconf, filename):
 
     verify(parsed == expected,
            "generated CMake values do not match Kconfig symbol values")
+
+
+def test_c_config_helpers():
+    print("Testing C configuration helpers")
+    compiler = shutil.which("cc")
+    if compiler is None:
+        print("Skipping C configuration helper test (cc was not found).")
+        return
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        probe_source = os.path.join(tmpdir, "compiler-probe.c")
+        probe_executable = os.path.join(tmpdir, "compiler-probe")
+        with open(probe_source, "w", encoding="utf-8") as f:
+            f.write("int main(void) { return 0; }\n")
+
+        result = subprocess.run(
+            [compiler, "-std=c99", "-Wall", "-Werror", probe_source,
+             "-o", probe_executable],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        if result.returncode != 0:
+            print("Skipping C configuration helper test "
+                  "(cc does not support the required C99 flags).")
+            return
+
+        try:
+            result = subprocess.run(
+                [probe_executable], stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, universal_newlines=True)
+        except OSError as e:
+            print("Skipping C configuration helper test "
+                  "(compiled programs cannot run: {}).".format(e))
+            return
+        if result.returncode != 0:
+            print("Skipping C configuration helper test "
+                  "(compiler probe executable failed).")
+            return
+
+        config_header = os.path.join(tmpdir, "config.h")
+        c = Kconfig("Kconfiglib/tests/Kcmake")
+        c.write_autoconf(config_header)
+        with open(config_header, "a", encoding="utf-8") as f:
+            f.write("#define CONFIG_ZERO 0\n#define ALT_ENABLED 1\n")
+
+        source = os.path.join(tmpdir, "helper-test.c")
+        executable = os.path.join(tmpdir, "helper-test")
+        with open(source, "w", encoding="utf-8") as f:
+            f.write(textwrap.dedent("""\
+                #include "config.h"
+                #include <kconfiglib.h>
+                #define CURRENT_MODULE 1
+
+                KCONFIG_SELECT_TRISTATE(CONFIG_ENABLED,
+                    (enum { selected_builtin = 2 };),
+                    (selected_builtin_branch_must_not_compile;),
+                    (selected_disabled_branch_must_not_compile;))
+                KCONFIG_SELECT_TRISTATE(CONFIG_MODULE,
+                    (selected_module_builtin_branch_must_not_compile;),
+                    (enum { selected_module = 1 };),
+                    (selected_module_disabled_branch_must_not_compile;))
+                KCONFIG_SELECT_TRISTATE(CONFIG_DISABLED,
+                    (selected_disabled_builtin_branch_must_not_compile;),
+                    (selected_disabled_module_branch_must_not_compile;),
+                    (enum { selected_disabled = 0 };))
+
+                KCONFIG_IF_BUILTIN(CONFIG_ENABLED,
+                    (enum { builtin_wrapper_selected = 1 };))
+                KCONFIG_IF_MODULE(CONFIG_MODULE,
+                    (enum { module_wrapper_selected = 1 };))
+                KCONFIG_IF_ENABLED(CONFIG_ENABLED,
+                    (enum { enabled_builtin_wrapper_selected = 1 };))
+                KCONFIG_IF_ENABLED(CONFIG_MODULE,
+                    (enum { enabled_module_wrapper_selected = 1 };))
+                KCONFIG_IF_ENABLED(CONFIG_DISABLED,
+                    (disabled_enabled_wrapper_must_not_compile;))
+
+                static const int selected_values[] = {
+                    KCONFIG_SELECT_TRISTATE(CONFIG_ENABLED, (2,), (1,), (0,))
+                    KCONFIG_SELECT_TRISTATE(CONFIG_MODULE, (2,), (1,), (0,))
+                    KCONFIG_SELECT_TRISTATE(CONFIG_DISABLED, (2,), (1,), (0,))
+                };
+
+                #if KCONFIG_IS_BUILTIN(CONFIG_ENABLED) != 1
+                #error CONFIG_ENABLED should be built in
+                #endif
+                #if KCONFIG_IS_MODULE(CONFIG_ENABLED) != 0
+                #error CONFIG_ENABLED should not be a module
+                #endif
+                #if KCONFIG_IS_ENABLED(CONFIG_ENABLED) != 1
+                #error CONFIG_ENABLED should be enabled
+                #endif
+
+                #if KCONFIG_IS_BUILTIN(CONFIG_MODULE) != 0
+                #error CONFIG_MODULE should not be built in
+                #endif
+                #if KCONFIG_IS_MODULE(CONFIG_MODULE) != 1
+                #error CONFIG_MODULE should be a module
+                #endif
+                #if KCONFIG_IS_ENABLED(CONFIG_MODULE) != 1
+                #error CONFIG_MODULE should be enabled
+                #endif
+
+                #if KCONFIG_IS_ENABLED(CONFIG_DISABLED) != 0
+                #error CONFIG_DISABLED should be disabled
+                #endif
+                #if KCONFIG_IS_ENABLED(CONFIG_UNDEFINED) != 0
+                #error CONFIG_UNDEFINED should be disabled
+                #endif
+                #if KCONFIG_IS_ENABLED(CONFIG_ZERO) != 0
+                #error CONFIG_ZERO should not be treated as enabled
+                #endif
+                #if KCONFIG_IS_ENABLED(ALT_ENABLED) != 1
+                #error custom configuration prefixes should work
+                #endif
+
+                #if KCONFIG_TRISTATE(CONFIG_ENABLED) != KCONFIG_TRISTATE_BUILTIN
+                #error CONFIG_ENABLED should have built-in tristate value
+                #endif
+                #if KCONFIG_TRISTATE(CONFIG_MODULE) != KCONFIG_TRISTATE_MODULE
+                #error CONFIG_MODULE should have module tristate value
+                #endif
+                #if KCONFIG_TRISTATE(CONFIG_DISABLED) != KCONFIG_TRISTATE_DISABLED
+                #error CONFIG_DISABLED should have disabled tristate value
+                #endif
+                #if KCONFIG_TRISTATE(CONFIG_UNDEFINED) != KCONFIG_TRISTATE_DISABLED
+                #error CONFIG_UNDEFINED should have disabled tristate value
+                #endif
+
+                #if KCONFIG_IS_REACHABLE(CONFIG_ENABLED, BUILTIN_COMPILATION) != 1
+                #error a built-in symbol should always be reachable
+                #endif
+                #if KCONFIG_IS_REACHABLE(CONFIG_MODULE, CURRENT_MODULE) != 1
+                #error a module should be reachable from module compilation
+                #endif
+                #if KCONFIG_IS_REACHABLE(CONFIG_MODULE, BUILTIN_COMPILATION) != 0
+                #error a module should not be reachable from built-in code
+                #endif
+                #if KCONFIG_IS_REACHABLE(CONFIG_DISABLED, CURRENT_MODULE) != 0
+                #error a disabled symbol should not be reachable
+                #endif
+
+                int main(void)
+                {
+                    return KCONFIG_IS_ENABLED(CONFIG_ENABLED) != 1 ||
+                           KCONFIG_IS_MODULE(CONFIG_MODULE) != 1 ||
+                           KCONFIG_IS_ENABLED(CONFIG_DISABLED) != 0 ||
+                           KCONFIG_IS_ENABLED(CONFIG_UNDEFINED) != 0 ||
+                           KCONFIG_TRISTATE(CONFIG_ENABLED) !=
+                               KCONFIG_TRISTATE_BUILTIN ||
+                           KCONFIG_TRISTATE(CONFIG_MODULE) !=
+                               KCONFIG_TRISTATE_MODULE ||
+                           KCONFIG_TRISTATE(CONFIG_DISABLED) !=
+                               KCONFIG_TRISTATE_DISABLED ||
+                           KCONFIG_IS_REACHABLE(CONFIG_MODULE,
+                                                CURRENT_MODULE) != 1 ||
+                           KCONFIG_IS_REACHABLE(CONFIG_MODULE,
+                                                BUILTIN_COMPILATION) != 0 ||
+                           selected_builtin != 2 ||
+                           selected_module != 1 ||
+                           selected_disabled != 0 ||
+                           selected_values[0] != 2 ||
+                           selected_values[1] != 1 ||
+                           selected_values[2] != 0 ||
+                           builtin_wrapper_selected != 1 ||
+                           module_wrapper_selected != 1 ||
+                           enabled_builtin_wrapper_selected != 1 ||
+                           enabled_module_wrapper_selected != 1;
+                }
+                """))
+
+        result = subprocess.run(
+            [compiler, "-std=c99", "-Wall", "-Werror", "-I", tmpdir,
+             "-I", os.path.dirname(os.path.abspath(__file__)), source,
+             "-o", executable],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        verify(result.returncode == 0,
+               "C configuration helper compilation failed:\n{}"
+               .format(result.stdout))
+        if result.returncode == 0:
+            result = subprocess.run(
+                [executable], stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, universal_newlines=True)
+            verify(result.returncode == 0,
+                   "C configuration helper executable failed:\n{}"
+                   .format(result.stdout))
 
 
 def test_cmake_module():
