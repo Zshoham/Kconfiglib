@@ -4,17 +4,21 @@
 # SPDX-License-Identifier: ISC
 
 """
-Writes a configuration file where all symbols are set to their their default
+Writes a configuration file where all symbols are set to their default
 values.
 
-The default output filename is '.config'. A different filename can be passed in
-the KCONFIG_CONFIG environment variable.
+The default output filename is ``.config``. A different filename can be passed
+in the ``KCONFIG_CONFIG`` environment variable.
 
-Usage for the Linux kernel:
+Usage for the Linux kernel::
 
-  $ make [ARCH=<arch>] scriptconfig SCRIPT=Kconfiglib/alldefconfig.py
+    $ make [ARCH=<arch>] scriptconfig SCRIPT=Kconfiglib/alldefconfig.py
 """
 import kconfiglib
+
+
+def _get_parser():
+    return kconfiglib._get_standard_arg_parser(__doc__)
 
 
 def main():

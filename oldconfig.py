@@ -6,22 +6,22 @@
 """
 Implements oldconfig functionality.
 
-  1. Loads existing .config
-  2. Prompts for the value of all modifiable symbols/choices that
-     aren't already set in the .config
-  3. Writes an updated .config
+1. Loads the existing ``.config``.
+2. Prompts for the value of all modifiable symbols and choices that are not
+   already set in ``.config``.
+3. Writes an updated ``.config``.
 
-The default input/output filename is '.config'. A different filename can be
-passed in the KCONFIG_CONFIG environment variable.
+The default input/output filename is ``.config``. A different filename can be
+passed in the ``KCONFIG_CONFIG`` environment variable.
 
 When overwriting a configuration file, the old version is saved to
-<filename>.old (e.g. .config.old).
+``<filename>.old`` (e.g. ``.config.old``).
 
-Entering '?' displays the help text of the symbol/choice, if any.
+Entering ``?`` displays the help text of the symbol or choice, if any.
 
-Unlike 'make oldconfig', this script doesn't print menu titles and comments,
+Unlike ``make oldconfig``, this script does not print menu titles and comments,
 but gives Kconfig definition locations. Printing menus and comments would be
-pretty easy to add: Look at the parents of each item, and print all menu
+straightforward to add: look at the parents of each item, and print all menu
 prompts and comments unless they have already been printed (assuming you want
 to skip "irrelevant" menus).
 """
@@ -29,7 +29,12 @@ from __future__ import print_function
 
 import sys
 
-from kconfiglib import Symbol, Choice, BOOL, TRISTATE, HEX, standard_kconfig
+from kconfiglib import Symbol, Choice, BOOL, TRISTATE, HEX, standard_kconfig, \
+                       _get_standard_arg_parser
+
+
+def _get_parser():
+    return _get_standard_arg_parser(__doc__)
 
 
 def _main():

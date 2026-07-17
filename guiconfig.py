@@ -9,42 +9,58 @@ Overview
 
 A Tkinter-based menuconfig implementation, based around a treeview control and
 a help display. The interface should feel familiar to people used to qconf
-('make xconfig').
+(``make xconfig``).
 
 The display can be toggled between showing the full tree and showing just a
-single menu (like menuconfig.py). Only single-menu mode distinguishes between
-symbols defined with 'config' and symbols defined with 'menuconfig'.
+single menu (like ``menuconfig.py``). Only single-menu mode distinguishes
+between symbols defined with ``config`` and symbols defined with
+``menuconfig``.
 
 A show-all mode is available that shows invisible items in red.
 
-Supports both mouse and keyboard controls. The following keyboard shortcuts are
-available:
+Supports both mouse and keyboard controls. The following keyboard shortcuts
+are available:
 
-  Ctrl-S   : Save configuration
-  Ctrl-O   : Open configuration
-  Ctrl-A   : Toggle show-all mode
-  Ctrl-N   : Toggle show-name mode
-  Ctrl-M   : Toggle single-menu mode
-  Ctrl-F, /: Open jump-to dialog
-  ESC      : Close
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Key
+     - Action
+   * - :kbd:`Ctrl-S`
+     - Save the configuration.
+   * - :kbd:`Ctrl-O`
+     - Open a configuration.
+   * - :kbd:`Ctrl-A`
+     - Toggle show-all mode.
+   * - :kbd:`Ctrl-N`
+     - Toggle show-name mode.
+   * - :kbd:`Ctrl-M`
+     - Toggle single-menu mode.
+   * - :kbd:`Ctrl-F` or :kbd:`/`
+     - Open the jump-to dialog.
+   * - :kbd:`Esc`
+     - Close the interface.
 
 Running
 =======
 
-guiconfig.py can be run either as a standalone executable or by calling the
-menuconfig() function with an existing Kconfig instance. The second option is a
-bit inflexible in that it will still load and save .config, etc.
+``guiconfig.py`` can be run either as a standalone executable or by calling
+:func:`menuconfig` with an existing :class:`kconfiglib.Kconfig` instance. The
+second option is a bit inflexible in that it will still load and save
+``.config``, etc.
 
 When run in standalone mode, the top-level Kconfig file to load can be passed
-as a command-line argument. With no argument, it defaults to "Kconfig".
+as a command-line argument. With no argument, it defaults to ``Kconfig``.
 
-The KCONFIG_CONFIG environment variable specifies the .config file to load (if
-it exists) and save. If KCONFIG_CONFIG is unset, ".config" is used.
+The ``KCONFIG_CONFIG`` environment variable specifies the ``.config`` file to
+load (if it exists) and save. If ``KCONFIG_CONFIG`` is unset, ``.config`` is
+used.
 
 When overwriting a configuration file, the old version is saved to
-<filename>.old (e.g. .config.old).
+``<filename>.old`` (e.g. ``.config.old``).
 
-$srctree is supported through Kconfiglib.
+``$srctree`` is supported through Kconfiglib.
 """
 
 # Note: There's some code duplication with menuconfig.py below, especially for
@@ -56,10 +72,17 @@ import errno
 import os
 import re
 
-from tkinter import *
-import tkinter.ttk as ttk
-import tkinter.font as font
-from tkinter import filedialog, messagebox
+try:
+    from tkinter import *
+    import tkinter.ttk as ttk
+    import tkinter.font as font
+    from tkinter import filedialog, messagebox
+except ImportError as err:
+    # Keep argument parsing (in particular --help) usable on systems without
+    # Tk. Raise the original import error only when the GUI is launched.
+    _TKINTER_IMPORT_ERROR = err
+else:
+    _TKINTER_IMPORT_ERROR = None
 
 from kconfiglib import Symbol, Choice, MENU, COMMENT, MenuNode, \
                        BOOL, TRISTATE, STRING, INT, HEX, \
@@ -67,7 +90,8 @@ from kconfiglib import Symbol, Choice, MENU, COMMENT, MenuNode, \
                        expr_str, expr_value, split_expr, \
                        standard_sc_expr_str, \
                        TRI_TO_STR, TYPE_TO_STR, \
-                       standard_kconfig, standard_config_filename
+                       standard_kconfig, standard_config_filename, \
+                       _get_standard_arg_parser
 
 
 # If True, use GIF image data embedded in this file instead of separate GIF
@@ -81,6 +105,10 @@ Type one or more strings/regexes and press Enter to list items that match all
 of them. Python's regex flavor is used (see the 're' module). Double-clicking
 an item will jump to it. Item values can be toggled directly within the dialog.\
 """
+
+
+def _get_parser():
+    return _get_standard_arg_parser(__doc__)
 
 
 def _main():
@@ -150,6 +178,9 @@ def menuconfig(kconf):
     kconf:
       Kconfig instance to be configured
     """
+    if _TKINTER_IMPORT_ERROR is not None:
+        raise _TKINTER_IMPORT_ERROR
+
     global _kconf
     global _conf_filename
     global _minconf_filename

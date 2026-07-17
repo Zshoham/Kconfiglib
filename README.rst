@@ -43,6 +43,13 @@ The entire library is contained in `kconfiglib.py
 bundled scripts are implemented on top of it. Implementing your own scripts
 should be relatively easy, if needed.
 
+User documentation is available in the ``docs/`` directory. It includes a
+getting-started guide, a guide to writing Kconfig files, common build workflows,
+and API and command-line references generated from the code's docstrings and
+argument parsers. To build the HTML site locally, run ``make -C docs venv``
+followed by ``make -C docs html``. ``make -C docs serve`` starts a local
+preview server.
+
 Kconfiglib is used exclusively by e.g. the `Zephyr
 <https://www.zephyrproject.org/>`__, `esp-idf
 <https://github.com/espressif/esp-idf>`__, and `ACRN

@@ -1,49 +1,59 @@
 # Copyright (c) 2011-2019, Ulf Magnusson
 # SPDX-License-Identifier: ISC
 
-"""
+# Raw string: the RST in this docstring uses backslash escapes (e.g. \*) that
+# would otherwise be invalid Python escape sequences.
+r"""
 Overview
 ========
 
 Kconfiglib is a Python 3 library for scripting and extracting information
-from Kconfig (https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt)
+from `Kconfig <https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt>`_
 configuration systems.
 
-See the homepage at https://github.com/zephyrproject-rtos/Kconfiglib for a longer
-overview.
+See the `Kconfiglib homepage
+<https://github.com/zephyrproject-rtos/Kconfiglib>`_ for a longer overview.
 
 Since Kconfiglib 12.0.0, the library version is available in
-kconfiglib.VERSION, which is a (<major>, <minor>, <patch>) tuple, e.g.
-(12, 0, 0).
+:data:`VERSION`, which is a ``(major, minor, patch)`` tuple, for example
+``(12, 0, 0)``.
 
 
 Using Kconfiglib on the Linux kernel with the Makefile targets
 ==============================================================
 
 For the Linux kernel, a handy interface is provided by the
-scripts/kconfig/Makefile patch, which can be applied with either 'git am' or
-the 'patch' utility:
+``scripts/kconfig/Makefile`` patch, which can be applied with either
+``git am`` or the ``patch`` utility:
 
-  $ wget -qO- https://raw.githubusercontent.com/zephyrproject-rtos/Kconfiglib/master/makefile.patch | git am
-  $ wget -qO- https://raw.githubusercontent.com/zephyrproject-rtos/Kconfiglib/master/makefile.patch | patch -p1
+.. code-block:: console
 
-Warning: Not passing -p1 to patch will cause the wrong file to be patched.
+   $ wget -qO- https://raw.githubusercontent.com/zephyrproject-rtos/Kconfiglib/master/makefile.patch | git am
+   $ wget -qO- https://raw.githubusercontent.com/zephyrproject-rtos/Kconfiglib/master/makefile.patch | patch -p1
+
+.. warning::
+
+   Not passing ``-p1`` to ``patch`` will cause the wrong file to be patched.
 
 Please tell me if the patch does not apply. It should be trivial to apply
 manually, as it's just a block of text that needs to be inserted near the other
-*conf: targets in scripts/kconfig/Makefile.
+``*conf:`` targets in ``scripts/kconfig/Makefile``.
 
 Look further down for a motivation for the Makefile patch and for instructions
 on how you can use Kconfiglib without it.
 
-If you do not wish to install Kconfiglib via pip, the Makefile patch is set up
-so that you can also just clone Kconfiglib into the kernel root:
+If you do not wish to install Kconfiglib via ``pip``, the Makefile patch is set
+up so that you can also just clone Kconfiglib into the kernel root:
 
-  $ git clone git://github.com/zephyrproject-rtos/Kconfiglib.git
-  $ git am Kconfiglib/makefile.patch  (or 'patch -p1 < Kconfiglib/makefile.patch')
+.. code-block:: console
 
-Warning: The directory name Kconfiglib/ is significant in this case, because
-it's added to PYTHONPATH by the new targets in makefile.patch.
+   $ git clone git://github.com/zephyrproject-rtos/Kconfiglib.git
+   $ git am Kconfiglib/makefile.patch  # or: patch -p1 < Kconfiglib/makefile.patch
+
+.. warning::
+
+   The directory name ``Kconfiglib/`` is significant in this case, because it
+   is added to ``PYTHONPATH`` by the new targets in ``makefile.patch``.
 
 The targets added by the Makefile patch are described in the following
 sections.
@@ -59,38 +69,40 @@ make guiconfig
 --------------
 
 This target runs the Tkinter menuconfig interface. To change the Python
-interpreter used, pass PYTHONCMD=<executable> to 'make'. The default is 'python'.
+interpreter used, pass ``PYTHONCMD=<executable>`` to ``make``. The default is
+``python``.
 
 
 make [ARCH=<arch>] iscriptconfig
 --------------------------------
 
-This target gives an interactive Python prompt where a Kconfig instance has
-been preloaded and is available in 'kconf'. To change the Python interpreter
-used, pass PYTHONCMD=<executable> to 'make'. The default is 'python'.
+This target gives an interactive Python prompt where a :class:`Kconfig`
+instance has been preloaded and is available as ``kconf``. To change the
+Python interpreter used, pass ``PYTHONCMD=<executable>`` to ``make``. The
+default is ``python``.
 
 To get a feel for the API, try evaluating and printing the symbols in
-kconf.defined_syms, and explore the MenuNode menu tree starting at
-kconf.top_node by following 'next' and 'list' pointers.
+``kconf.defined_syms``, and explore the :class:`MenuNode` menu tree starting at
+``kconf.top_node`` by following ``next`` and ``list`` pointers.
 
-The item contained in a menu node is found in MenuNode.item (note that this can
-be one of the constants kconfiglib.MENU and kconfiglib.COMMENT), and all
-symbols and choices have a 'nodes' attribute containing their menu nodes
+The item contained in a menu node is found in :attr:`MenuNode.item` (note that
+this can be one of the constants :data:`MENU` and :data:`COMMENT`), and all
+symbols and choices have a ``nodes`` attribute containing their menu nodes
 (usually only one). Printing a menu node will print its item, in Kconfig
 format.
 
-If you want to look up a symbol by name, use the kconf.syms dictionary.
+If you want to look up a symbol by name, use the ``kconf.syms`` dictionary.
 
 
 make scriptconfig SCRIPT=<script> [SCRIPT_ARG=<arg>]
 ----------------------------------------------------
 
-This target runs the Python script given by the SCRIPT parameter on the
-configuration. sys.argv[1] holds the name of the top-level Kconfig file
-(currently always "Kconfig" in practice), and sys.argv[2] holds the SCRIPT_ARG
-argument, if given.
+This target runs the Python script given by the ``SCRIPT`` parameter on the
+configuration. ``sys.argv[1]`` holds the name of the top-level Kconfig file
+(currently always ``Kconfig`` in practice), and ``sys.argv[2]`` holds the
+``SCRIPT_ARG`` argument, if given.
 
-See the examples/ subdirectory for example scripts.
+See the ``examples/`` subdirectory for example scripts.
 
 
 make dumpvarsconfig
@@ -98,10 +110,10 @@ make dumpvarsconfig
 
 This target prints a list of all environment variables referenced from the
 Kconfig files, together with their values. See the
-Kconfiglib/examples/dumpvars.py script.
+``Kconfiglib/examples/dumpvars.py`` script.
 
 Only environment variables that are referenced via the Kconfig preprocessor
-$(FOO) syntax are included. The preprocessor was added in Linux 4.18.
+``$(FOO)`` syntax are included. The preprocessor was added in Linux 4.18.
 
 
 Using Kconfiglib without the Makefile targets
@@ -109,86 +121,101 @@ Using Kconfiglib without the Makefile targets
 
 The make targets are only needed to pick up environment variables exported from
 the Kbuild makefiles and referenced inside Kconfig files, via e.g.
-'source "arch/$(SRCARCH)/Kconfig" and commands run via '$(shell,...)'.
+``source "arch/$(SRCARCH)/Kconfig"`` and commands run via ``$(shell,...)``.
 
 These variables are referenced as of writing (Linux 4.18), together with sample
 values:
 
-  srctree          (.)
-  ARCH             (x86)
-  SRCARCH          (x86)
-  KERNELVERSION    (4.18.0)
-  CC               (gcc)
-  HOSTCC           (gcc)
-  HOSTCXX          (g++)
-  CC_VERSION_TEXT  (gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0)
+.. code-block:: text
 
-Older kernels only reference ARCH, SRCARCH, and KERNELVERSION.
+   srctree          (.)
+   ARCH             (x86)
+   SRCARCH          (x86)
+   KERNELVERSION    (4.18.0)
+   CC               (gcc)
+   HOSTCC           (gcc)
+   HOSTCXX          (g++)
+   CC_VERSION_TEXT  (gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0)
+
+Older kernels only reference ``ARCH``, ``SRCARCH``, and ``KERNELVERSION``.
 
 If your kernel is recent enough (4.18+), you can get a list of referenced
-environment variables via 'make dumpvarsconfig' (see above). Note that this
+environment variables via ``make dumpvarsconfig`` (see above). Note that this
 command is added by the Makefile patch.
 
 To run Kconfiglib without the Makefile patch, set the environment variables
 manually:
 
-  $ srctree=. ARCH=x86 SRCARCH=x86 KERNELVERSION=`make kernelversion` ... python(3)
-  >>> import kconfiglib
-  >>> kconf = kconfiglib.Kconfig()  # filename defaults to "Kconfig"
+.. code-block:: pycon
 
-Search the top-level Makefile for "Additional ARCH settings" to see other
-possibilities for ARCH and SRCARCH.
+   $ srctree=. ARCH=x86 SRCARCH=x86 KERNELVERSION=$(make kernelversion) ... python3
+   >>> import kconfiglib
+   >>> kconf = kconfiglib.Kconfig()  # filename defaults to "Kconfig"
+
+Search the top-level Makefile for ``Additional ARCH settings`` to see other
+possibilities for ``ARCH`` and ``SRCARCH``.
 
 
 Using Kconfiglib with CMake
 ===========================
 
 To make Kconfig values available while configuring a CMake project, pass
---cmake-out <filename> to genconfig.py and include the generated file from
-CMakeLists.txt:
+``--cmake-out <filename>`` to ``genconfig.py`` and include the generated file
+from ``CMakeLists.txt``:
 
-  $ python3 genconfig.py --cmake-out build/kconfig.cmake Kconfig
+.. code-block:: cmake
 
-  # CMakeLists.txt
-  include(${CMAKE_BINARY_DIR}/kconfig.cmake)
-  if(CONFIG_MY_FEATURE)
-    target_sources(my_target PRIVATE feature.c)
-  endif()
+   # CMakeLists.txt
+   include(${CMAKE_BINARY_DIR}/kconfig.cmake)
+   if(CONFIG_MY_FEATURE)
+     target_sources(my_target PRIVATE feature.c)
+   endif()
 
-The generated file contains CMake set() commands. Symbol variables normally
-use the CONFIG_ prefix, and boolean and tristate values are y, m, or n, which
-can be used directly in CMake conditions. The file also defines
-KCONFIG_SYMBOLS with the names of all generated symbol variables. Pass
---header-path <filename> in the same genconfig.py invocation if the sources
-also need a C header.
+Run ``genconfig.py`` before configuring the CMake project:
 
-For tighter build-system integration, Kconfiglib ships cmake/Kconfig.cmake.
-Add that directory to CMAKE_MODULE_PATH, include the module, and call
-kconfig_configure() during CMake configuration:
+.. code-block:: console
 
-  list(APPEND CMAKE_MODULE_PATH "${KCONFIGLIB_SOURCE_DIR}/cmake")
-  include(Kconfig)
-  kconfig_configure(
-    KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
-    CONFIG "${CMAKE_BINARY_DIR}/.config")
+   $ python3 genconfig.py --cmake-out build/kconfig.cmake Kconfig
+
+The generated file contains CMake ``set()`` commands. Symbol variables normally
+use the ``CONFIG_`` prefix, and boolean and tristate values are ``y``, ``m``,
+or ``n``, which can be used directly in CMake conditions. The file also
+defines ``KCONFIG_SYMBOLS`` with the names of all generated symbol variables.
+Pass ``--header-path <filename>`` in the same ``genconfig.py`` invocation if
+the sources also need a C header.
+
+For tighter build-system integration, Kconfiglib ships
+``cmake/Kconfig.cmake``. Add that directory to ``CMAKE_MODULE_PATH``, include
+the module, and call ``kconfig_configure()`` during CMake configuration:
+
+.. code-block:: cmake
+
+   list(APPEND CMAKE_MODULE_PATH "${KCONFIGLIB_SOURCE_DIR}/cmake")
+   include(Kconfig)
+   kconfig_configure(
+     KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
+     CONFIG "${CMAKE_BINARY_DIR}/.config")
 
 This generates a C header and a CMake include file in the build directory and
-imports all generated symbol variables into the calling scope. If .config does
+imports all generated symbol variables into the calling scope. If ``.config`` does
 not exist, it is initialized with the default configuration. An existing
-.config is treated as input and is not overwritten during configuration.
+``.config`` is treated as input and is not overwritten during configuration.
 
-The wrapper provides the kconfig_generate, kconfig_menuconfig,
-kconfig_guiconfig, kconfig_oldconfig, and kconfig_olddefconfig targets. It also
-tracks the top-level Kconfig file, sourced Kconfig files, and .config so that
-CMake automatically reconfigures when any of them changes. The optional
-BINARY_DIR, NAME, and PYTHON_EXECUTABLE arguments customize the output
-directory, target-name prefix, and Python interpreter, respectively. The
-kconfig_init() function is an alias for kconfig_configure().
+The wrapper provides the ``kconfig_generate``, ``kconfig_menuconfig``,
+``kconfig_guiconfig``, ``kconfig_oldconfig``, and ``kconfig_olddefconfig``
+targets. It also tracks the top-level Kconfig file, sourced Kconfig files, and
+``.config`` so that CMake automatically reconfigures when any of them changes.
+The optional ``BINARY_DIR``, ``NAME``, and ``PYTHON_EXECUTABLE`` arguments
+customize the output directory, target-name prefix, and Python interpreter,
+respectively. The ``kconfig_init()`` function is an alias for
+``kconfig_configure()``.
 
 First configure the project as usual. For example, with a build directory
-named build:
+named ``build``:
 
-  $ cmake -S . -B build
+.. code-block:: console
+
+   $ cmake -S . -B build
 
 The generated targets can then be run with ``cmake --build`` as described
 below. These commands work with any CMake generator, including Make and Ninja.
@@ -198,48 +225,52 @@ cmake --build build --target kconfig_generate
 ------------------------------------------------
 
 This target regenerates the C header, CMake include file, and normalized full
-configuration from .config. Normal project targets that use these generated
-files should depend on the target named by the KCONFIG_TARGET variable set by
-kconfig_configure().
+configuration from ``.config``. Normal project targets that use these generated
+files should depend on the target named by the ``KCONFIG_TARGET`` variable set
+by ``kconfig_configure()``.
 
 
 cmake --build build --target kconfig_menuconfig
 --------------------------------------------------
 
 This target opens the curses menuconfig interface. Save and exit to update the
-.config file passed to kconfig_configure(). CMake notices the change and
-reconfigures the project on the next build:
+``.config`` file passed to ``kconfig_configure()``. CMake notices the change
+and reconfigures the project on the next build:
 
-  $ cmake --build build --target kconfig_menuconfig
-  $ cmake --build build
+.. code-block:: console
+
+   $ cmake --build build --target kconfig_menuconfig
+   $ cmake --build build
 
 
 cmake --build build --target kconfig_guiconfig
 -------------------------------------------------
 
 This target opens the Tkinter graphical configuration interface. Like
-kconfig_menuconfig, saving updates .config.
+``kconfig_menuconfig``, saving updates ``.config``.
 
 
 cmake --build build --target kconfig_oldconfig
 ------------------------------------------------
 
-This target updates an existing .config and prompts for values for any new
+This target updates an existing ``.config`` and prompts for values for any new
 symbols introduced since it was created.
 
 
 cmake --build build --target kconfig_olddefconfig
 ---------------------------------------------------
 
-This target updates an existing .config without prompting, assigning default
+This target updates an existing ``.config`` without prompting, assigning default
 values to new symbols.
 
-The default target prefix is kconfig. Passing ``NAME myboard`` to
-kconfig_configure() changes the targets to myboard_generate,
-myboard_menuconfig, myboard_guiconfig, myboard_oldconfig, and
-myboard_olddefconfig. For example:
+The default target prefix is ``kconfig``. Passing ``NAME myboard`` to
+``kconfig_configure()`` changes the targets to ``myboard_generate``,
+``myboard_menuconfig``, ``myboard_guiconfig``, ``myboard_oldconfig``, and
+``myboard_olddefconfig``. For example:
 
-  $ cmake --build build --target myboard_menuconfig
+.. code-block:: console
+
+   $ cmake --build build --target myboard_menuconfig
 
 
 Intro to symbol values
@@ -247,140 +278,154 @@ Intro to symbol values
 
 Kconfiglib has the same assignment semantics as the C implementation.
 
-Any symbol can be assigned a value by the user (via Kconfig.load_config() or
-Symbol.set_value()), but this user value is only respected if the symbol is
-visible, which corresponds to it (currently) being visible in the menuconfig
-interface.
+Any symbol can be assigned a value by the user (via
+:meth:`Kconfig.load_config` or :meth:`Symbol.set_value`), but this user value
+is only respected if the symbol is visible, which corresponds to it
+(currently) being visible in the menuconfig interface.
 
 For symbols with prompts, the visibility of the symbol is determined by the
 condition on the prompt. Symbols without prompts are never visible, so setting
 a user value on them is pointless. A warning will be printed by default if
-Symbol.set_value() is called on a promptless symbol. Assignments to promptless
-symbols are normal within a .config file, so no similar warning will be printed
-by load_config().
+:meth:`Symbol.set_value` is called on a promptless symbol. Assignments to
+promptless symbols are normal within a ``.config`` file, so no similar warning
+will be printed by :meth:`Kconfig.load_config`.
 
-Dependencies from parents and 'if'/'depends on' are propagated to properties,
+Dependencies from parents and ``if``/``depends on`` are propagated to properties,
 including prompts, so these two configurations are logically equivalent:
 
-(1)
+Configuration 1:
 
-  menu "menu"
-      depends on A
+.. code-block:: kconfig
 
-  if B
+   menu "menu"
+       depends on A
 
-  config FOO
-      tristate "foo" if D
-      default y
-      depends on C
+   if B
 
-  endif
+   config FOO
+       tristate "foo" if D
+       default y
+       depends on C
 
-  endmenu
+   endif
 
-(2)
+   endmenu
 
-  menu "menu"
-      depends on A
+Configuration 2:
 
-  config FOO
-      tristate "foo" if A && B && C && D
-      default y if A && B && C
+.. code-block:: kconfig
 
-  endmenu
+   menu "menu"
+       depends on A
 
-In this example, A && B && C && D (the prompt condition) needs to be non-n for
-FOO to be visible (assignable). If its value is m, the symbol can only be
-assigned the value m: The visibility sets an upper bound on the value that can
-be assigned by the user, and any higher user value will be truncated down.
+   config FOO
+       tristate "foo" if A && B && C && D
+       default y if A && B && C
 
-'default' properties are independent of the visibility, though a 'default' will
-often get the same condition as the prompt due to dependency propagation.
-'default' properties are used if the symbol is not visible or has no user
+   endmenu
+
+In this example, ``A && B && C && D`` (the prompt condition) needs to be
+non-``n`` for ``FOO`` to be visible (assignable). If its value is ``m``, the
+symbol can only be assigned the value ``m``: The visibility sets an upper
+bound on the value that can be assigned by the user, and any higher user value
+will be truncated down.
+
+``default`` properties are independent of the visibility, though a ``default``
+will often get the same condition as the prompt due to dependency propagation.
+``default`` properties are used if the symbol is not visible or has no user
 value.
 
 Symbols with no user value (or that have a user value but are not visible) and
-no (active) 'default' default to n for bool/tristate symbols, and to the empty
+no active ``default`` default to ``n`` for bool/tristate symbols, and to the empty
 string for other symbol types.
 
-'select' works similarly to symbol visibility, but sets a lower bound on the
+``select`` works similarly to symbol visibility, but sets a lower bound on the
 value of the symbol. The lower bound is determined by the value of the
-select*ing* symbol. 'select' does not respect visibility, so non-visible
+*selecting* symbol. ``select`` does not respect visibility, so non-visible
 symbols can be forced to a particular (minimum) value by a select as well.
 
-For non-bool/tristate symbols, it only matters whether the visibility is n or
-non-n: m visibility acts the same as y visibility.
+For non-bool/tristate symbols, it only matters whether the visibility is ``n``
+or non-``n``: ``m`` visibility acts the same as ``y`` visibility.
 
-Conditions on 'default' and 'select' work in mostly intuitive ways. If the
-condition is n, the 'default' or 'select' is disabled. If it is m, the
-'default' or 'select' value (the value of the selecting symbol) is truncated
-down to m.
+Conditions on ``default`` and ``select`` work in mostly intuitive ways. If the
+condition is ``n``, the ``default`` or ``select`` is disabled. If it is ``m``,
+the ``default`` or ``select`` value (the value of the selecting symbol) is
+truncated down to ``m``.
 
-When writing a configuration with Kconfig.write_config(), only symbols that are
-visible, have an (active) default, or are selected will get written out (note
-that this includes all symbols that would accept user values). Kconfiglib
-matches the .config format produced by the C implementations down to the
+When writing a configuration with :meth:`Kconfig.write_config`, only symbols
+that are visible, have an active default, or are selected will get written out
+(note that this includes all symbols that would accept user values). Kconfiglib
+matches the ``.config`` format produced by the C implementations down to the
 character. This eases testing.
 
-For a visible bool/tristate symbol FOO with value n, this line is written to
-.config:
+For a visible bool/tristate symbol ``FOO`` with value ``n``, this line is
+written to ``.config``:
 
-    # CONFIG_FOO is not set
+.. code-block:: text
 
-The point is to remember the user n selection (which might differ from the
+   # CONFIG_FOO is not set
+
+The point is to remember the user ``n`` selection (which might differ from the
 default value the symbol would get), while at the same sticking to the rule
-that undefined corresponds to n (.config uses Makefile format, making the line
-above a comment). When the .config file is read back in, this line will be
-treated the same as the following assignment:
+that undefined corresponds to ``n`` (``.config`` uses Makefile format, making
+the line above a comment). When the ``.config`` file is read back in, this line
+will be treated the same as the following assignment:
 
-    CONFIG_FOO=n
+.. code-block:: make
+
+   CONFIG_FOO=n
 
 In Kconfiglib, the set of (currently) assignable values for a bool/tristate
-symbol appear in Symbol.assignable. For other symbol types, just check if
-sym.visibility is non-0 (non-n) to see whether the user value will have an
-effect.
+symbol appears in :attr:`Symbol.assignable`. For other symbol types, just check
+if ``sym.visibility`` is nonzero (non-``n``) to see whether the user value will
+have an effect.
 
 
 Intro to the menu tree
 ======================
 
 The menu structure, as seen in e.g. menuconfig, is represented by a tree of
-MenuNode objects. The top node of the configuration corresponds to an implicit
+:class:`MenuNode` objects. The top node of the configuration corresponds to an implicit
 top-level menu, the title of which is shown at the top in the standard
-menuconfig interface. (The title is also available in Kconfig.mainmenu_text in
+menuconfig interface. (The title is also available in
+:attr:`Kconfig.mainmenu_text` in
 Kconfiglib.)
 
-The top node is found in Kconfig.top_node. From there, you can visit child menu
-nodes by following the 'list' pointer, and any following menu nodes by
-following the 'next' pointer. Usually, a non-None 'list' pointer indicates a
-menu or Choice, but menu nodes for symbols can sometimes have a non-None 'list'
-pointer too due to submenus created implicitly from dependencies.
+The top node is found in :attr:`Kconfig.top_node`. From there, you can visit
+child menu nodes by following the ``list`` pointer, and any following menu
+nodes by following the ``next`` pointer. Usually, a non-``None`` ``list``
+pointer indicates a menu or :class:`Choice`, but menu nodes for symbols can
+sometimes have a non-``None`` ``list`` pointer too due to submenus created
+implicitly from dependencies.
 
-MenuNode.item is either a Symbol or a Choice object, or one of the constants
-MENU and COMMENT. The prompt of the menu node can be found in MenuNode.prompt,
-which also holds the title for menus and comments. For Symbol and Choice,
-MenuNode.help holds the help text (if any, otherwise None).
+:attr:`MenuNode.item` is either a :class:`Symbol` or a :class:`Choice` object,
+or one of the constants :data:`MENU` and :data:`COMMENT`. The prompt of the
+menu node can be found in :attr:`MenuNode.prompt`, which also holds the title
+for menus and comments. For symbols and choices, :attr:`MenuNode.help` holds
+the help text (if any, otherwise ``None``).
 
 Most symbols will only have a single menu node. A symbol defined in multiple
 locations will have one menu node for each location. The list of menu nodes for
-a Symbol or Choice can be found in the Symbol/Choice.nodes attribute.
+a symbol or choice can be found in its ``nodes`` attribute.
 
 Note that prompts and help texts for symbols and choices are stored in their
-menu node(s) rather than in the Symbol or Choice objects themselves. This makes
+menu nodes rather than in the :class:`Symbol` or :class:`Choice` objects
+themselves. This makes
 it possible to define a symbol in multiple locations with a different prompt or
 help text in each location. To get the help text or prompt for a symbol with a
-single menu node, do sym.nodes[0].help and sym.nodes[0].prompt, respectively.
-The prompt is a (text, condition) tuple, where condition determines the
-visibility (see 'Intro to expressions' below).
+single menu node, use ``sym.nodes[0].help`` and ``sym.nodes[0].prompt``,
+respectively. The prompt is a ``(text, condition)`` tuple, where ``condition``
+determines the visibility (see `Intro to expressions`_ below).
 
-This organization mirrors the C implementation. MenuNode is called
-'struct menu' there, but I thought "menu" was a confusing name.
+This organization mirrors the C implementation. :class:`MenuNode` is called
+``struct menu`` there, but "menu" was a confusing name for the Python API.
 
-It is possible to give a Choice a name and define it in multiple locations,
-hence why Choice.nodes is also a list.
+It is possible to give a :class:`Choice` a name and define it in multiple
+locations, hence why :attr:`Choice.nodes` is also a list.
 
 As a convenience, the properties added at a particular definition location are
-available on the MenuNode itself, in e.g. MenuNode.defaults. This is helpful
+available on the :class:`MenuNode` itself, in e.g. :attr:`MenuNode.defaults`.
+This is helpful
 when generating documentation, so that symbols/choices defined in multiple
 locations can be shown with the correct properties at each location.
 
@@ -388,64 +433,85 @@ locations can be shown with the correct properties at each location.
 Intro to expressions
 ====================
 
-Expressions can be evaluated with the expr_value() function and printed with
-the expr_str() function (these are used internally as well). Evaluating an
-expression always yields a tristate value, where n, m, and y are represented as
-0, 1, and 2, respectively.
+Expressions can be evaluated with :func:`expr_value` and printed with
+:func:`expr_str` (these are used internally as well). Evaluating an expression
+always yields a tristate value, where ``n``, ``m``, and ``y`` are represented
+as 0, 1, and 2, respectively.
 
 The following table should help you figure out how expressions are represented.
-A, B, C, ... are symbols (Symbol instances), NOT is the kconfiglib.NOT
-constant, etc.
+``A``, ``B``, ``C``, ... are :class:`Symbol` instances; ``NOT`` is the
+:data:`NOT` constant; and so on.
 
-Expression            Representation
-----------            --------------
-A                     A
-"A"                   A (constant symbol)
-!A                    (NOT, A)
-A && B                (AND, A, B)
-A && B && C           (AND, A, (AND, B, C))
-A || B                (OR, A, B)
-A || (B && C && D)    (OR, A, (AND, B, (AND, C, D)))
-A = B                 (EQUAL, A, B)
-A != "foo"            (UNEQUAL, A, foo (constant symbol))
-A && B = C && D       (AND, A, (AND, (EQUAL, B, C), D))
-n                     Kconfig.n (constant symbol)
-m                     Kconfig.m (constant symbol)
-y                     Kconfig.y (constant symbol)
-"y"                   Kconfig.y (constant symbol)
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
 
-Strings like "foo" in 'default "foo"' or 'depends on SYM = "foo"' are
-represented as constant symbols, so the only values that appear in expressions
-are symbols***. This mirrors the C implementation.
+   * - Expression
+     - Representation
+   * - ``A``
+     - ``A``
+   * - ``"A"``
+     - ``A`` (constant symbol)
+   * - ``!A``
+     - ``(NOT, A)``
+   * - ``A && B``
+     - ``(AND, A, B)``
+   * - ``A && B && C``
+     - ``(AND, A, (AND, B, C))``
+   * - ``A || B``
+     - ``(OR, A, B)``
+   * - ``A || (B && C && D)``
+     - ``(OR, A, (AND, B, (AND, C, D)))``
+   * - ``A = B``
+     - ``(EQUAL, A, B)``
+   * - ``A != "foo"``
+     - ``(UNEQUAL, A, foo)`` (constant symbol)
+   * - ``A && B = C && D``
+     - ``(AND, A, (AND, (EQUAL, B, C), D))``
+   * - ``n``
+     - ``Kconfig.n`` (constant symbol)
+   * - ``m``
+     - ``Kconfig.m`` (constant symbol)
+   * - ``y`` or ``"y"``
+     - ``Kconfig.y`` (constant symbol)
 
-***For choice symbols, the parent Choice will appear in expressions as well,
-but it's usually invisible as the value interfaces of Symbol and Choice are
-identical. This mirrors the C implementation and makes different choice modes
-"just work".
+Strings like ``"foo"`` in ``default "foo"`` or
+``depends on SYM = "foo"`` are represented as constant symbols, so the only
+values that appear in expressions are symbols. [#choice-expressions]_ This
+mirrors the C implementation.
+
+.. [#choice-expressions] For choice symbols, the parent :class:`Choice` will
+   appear in expressions as well, but it is usually invisible because the
+   value interfaces of :class:`Symbol` and :class:`Choice` are identical. This
+   mirrors the C implementation and makes different choice modes "just work".
 
 Manual evaluation examples:
 
-  - The value of A && B is min(A.tri_value, B.tri_value)
+* The value of ``A && B`` is ``min(A.tri_value, B.tri_value)``.
 
-  - The value of A || B is max(A.tri_value, B.tri_value)
+* The value of ``A || B`` is ``max(A.tri_value, B.tri_value)``.
 
-  - The value of !A is 2 - A.tri_value
+* The value of ``!A`` is ``2 - A.tri_value``.
 
-  - The value of A = B is 2 (y) if A.str_value == B.str_value, and 0 (n)
-    otherwise. Note that str_value is used here instead of tri_value.
+* The value of ``A = B`` is 2 (``y``) if
+  ``A.str_value == B.str_value``, and 0 (``n``) otherwise. Note that
+  ``str_value`` is used here instead of ``tri_value``.
 
-    For constant (as well as undefined) symbols, str_value matches the name of
-    the symbol. This mirrors the C implementation and explains why
-    'depends on SYM = "foo"' above works as expected.
+  For constant (as well as undefined) symbols, ``str_value`` matches the name
+  of the symbol. This mirrors the C implementation and explains why
+  ``depends on SYM = "foo"`` above works as expected.
 
-n/m/y are automatically converted to the corresponding constant symbols
-"n"/"m"/"y" (Kconfig.n/m/y) during parsing.
+``n``/``m``/``y`` are automatically converted to the corresponding constant
+symbols (:attr:`Kconfig.n`, :attr:`Kconfig.m`, and :attr:`Kconfig.y`) during
+parsing.
 
-Kconfig.const_syms is a dictionary like Kconfig.syms but for constant symbols.
+:attr:`Kconfig.const_syms` is a dictionary like :attr:`Kconfig.syms`, but for
+constant symbols.
 
-If a condition is missing (e.g., <cond> when the 'if <cond>' is removed from
-'default A if <cond>'), it is actually Kconfig.y. The standard __str__()
-functions just avoid printing 'if y' conditions to give cleaner output.
+If a condition is missing (e.g., ``<cond>`` when ``if <cond>`` is removed from
+``default A if <cond>``), it is actually :attr:`Kconfig.y`. The standard
+``__str__()`` functions just avoid printing ``if y`` conditions to give cleaner
+output.
 
 
 Kconfig extensions
@@ -453,79 +519,91 @@ Kconfig extensions
 
 Kconfiglib includes a couple of Kconfig extensions:
 
-'source' with relative path
+source with relative paths
 ---------------------------
 
-The 'rsource' statement sources Kconfig files with a path relative to directory
-of the Kconfig file containing the 'rsource' statement, instead of relative to
-the project root.
+The ``rsource`` statement sources Kconfig files with a path relative to the
+directory of the Kconfig file containing the ``rsource`` statement, instead of
+relative to the project root.
 
-Consider following directory tree:
+Consider the following directory tree:
 
-  Project
-  +--Kconfig
-  |
-  +--src
-     +--Kconfig
-     |
-     +--SubSystem1
-        +--Kconfig
-        |
-        +--ModuleA
-           +--Kconfig
+.. code-block:: text
 
-In this example, assume that src/SubSystem1/Kconfig wants to source
-src/SubSystem1/ModuleA/Kconfig.
+   Project
+   +-- Kconfig
+   |
+   +-- src
+       +-- Kconfig
+       |
+       +-- SubSystem1
+           +-- Kconfig
+           |
+           +-- ModuleA
+               +-- Kconfig
 
-With 'source', this statement would be used:
+In this example, assume that ``src/SubSystem1/Kconfig`` wants to source
+``src/SubSystem1/ModuleA/Kconfig``.
 
-  source "src/SubSystem1/ModuleA/Kconfig"
+With ``source``, this statement would be used:
 
-With 'rsource', this turns into
+.. code-block:: kconfig
 
-  rsource "ModuleA/Kconfig"
+   source "src/SubSystem1/ModuleA/Kconfig"
 
-If an absolute path is given to 'rsource', it acts the same as 'source'.
+With ``rsource``, this becomes:
 
-'rsource' can be used to create "position-independent" Kconfig trees that can
+.. code-block:: kconfig
+
+   rsource "ModuleA/Kconfig"
+
+If an absolute path is given to ``rsource``, it acts the same as ``source``.
+
+``rsource`` can be used to create "position-independent" Kconfig trees that can
 be moved around freely.
 
 
-Globbing 'source'
+Globbing source
 -----------------
 
-'source' and 'rsource' accept glob patterns, sourcing all matching Kconfig
-files. They require at least one matching file, raising a KconfigError
+``source`` and ``rsource`` accept glob patterns, sourcing all matching Kconfig
+files. They require at least one matching file, raising a :class:`KconfigError`
 otherwise.
 
 For example, the following statement might source sub1/foofoofoo and
 sub2/foobarfoo:
 
-  source "sub[12]/foo*foo"
+.. code-block:: kconfig
 
-The glob patterns accepted are the same as for the standard glob.glob()
+   source "sub[12]/foo*foo"
+
+The glob patterns accepted are the same as for the standard :func:`glob.glob`
 function.
 
 Two additional statements are provided for cases where it's acceptable for a
-pattern to match no files: 'osource' and 'orsource' (the o is for "optional").
+pattern to match no files: ``osource`` and ``orsource`` (the *o* is for
+"optional").
 
 For example, the following statements will be no-ops if neither "foo" nor any
-files matching "bar*" exist:
+files matching ``bar*`` exist:
 
-  osource "foo"
-  osource "bar*"
+.. code-block:: kconfig
 
-'orsource' does a relative optional source.
+   osource "foo"
+   osource "bar*"
 
-'source' and 'osource' are analogous to 'include' and '-include' in Make.
+``orsource`` does a relative optional source.
+
+``source`` and ``osource`` are analogous to ``include`` and ``-include`` in
+Make.
 
 
 Generalized def_* keywords
 --------------------------
 
-def_int, def_hex, and def_string are available in addition to def_bool and
-def_tristate, allowing int, hex, and string symbols to be given a type and a
-default at the same time.
+``def_int``, ``def_hex``, and ``def_string`` are available in addition to
+``def_bool`` and ``def_tristate``, allowing int, hex, and string symbols to be
+given a type and a default at the same time.
 
 
 Extra optional warnings
@@ -533,25 +611,26 @@ Extra optional warnings
 
 Some optional warnings can be controlled via environment variables:
 
-  - KCONFIG_WARN_UNDEF: If set to 'y', warnings will be generated for all
-    references to undefined symbols within Kconfig files. The only gotcha is
-    that all hex literals must be prefixed with "0x" or "0X", to make it
-    possible to distinguish them from symbol references.
+``KCONFIG_WARN_UNDEF``
+   If set to ``y``, warnings will be generated for all references to undefined
+   symbols within Kconfig files. The only gotcha is that all hex literals must
+   be prefixed with ``0x`` or ``0X``, to make it possible to distinguish them
+   from symbol references.
 
-    Some projects (e.g. the Linux kernel) use multiple Kconfig trees with many
-    shared Kconfig files, leading to some safe undefined symbol references.
-    KCONFIG_WARN_UNDEF is useful in projects that only have a single Kconfig
-    tree though.
+   Some projects (e.g. the Linux kernel) use multiple Kconfig trees with many
+   shared Kconfig files, leading to some safe undefined symbol references.
+   ``KCONFIG_WARN_UNDEF`` is useful in projects that only have a single
+   Kconfig tree, though.
 
-    KCONFIG_STRICT is an older alias for this environment variable, supported
-    for backwards compatibility.
+   ``KCONFIG_STRICT`` is an older alias for this environment variable,
+   supported for backwards compatibility.
 
-  - KCONFIG_WARN_UNDEF_ASSIGN: If set to 'y', warnings will be generated for
-    all assignments to undefined symbols within .config files. By default, no
-    such warnings are generated.
+``KCONFIG_WARN_UNDEF_ASSIGN``
+   If set to ``y``, warnings will be generated for all assignments to undefined
+   symbols within ``.config`` files. By default, no such warnings are generated.
 
-    This warning can also be enabled/disabled via the Kconfig.warn_assign_undef
-    variable.
+   This warning can also be enabled or disabled via
+   :attr:`Kconfig.warn_assign_undef`.
 
 
 Preprocessor user functions defined in Python
@@ -561,77 +640,83 @@ Preprocessor functions can be defined in Python, which makes it simple to
 integrate information from existing Python tools into Kconfig (e.g. to have
 Kconfig symbols depend on hardware information stored in some other format).
 
-Putting a Python module named kconfigfunctions(.py) anywhere in sys.path will
-cause it to be imported by Kconfiglib (in Kconfig.__init__()). Note that
-sys.path can be customized via PYTHONPATH, and includes the directory of the
-module being run by default, as well as installation directories.
+Putting a Python module named ``kconfigfunctions`` (usually
+``kconfigfunctions.py``) anywhere in :data:`sys.path` will cause it to be
+imported by Kconfiglib (in :meth:`Kconfig.__init__`). Note that
+:data:`sys.path` can be customized via ``PYTHONPATH``, and includes the
+directory of the module being run by default, as well as installation
+directories.
 
-If the KCONFIG_FUNCTIONS environment variable is set, it gives a different
-module name to use instead of 'kconfigfunctions'.
+If the ``KCONFIG_FUNCTIONS`` environment variable is set, it gives a different
+module name to use instead of ``kconfigfunctions``.
 
-The imported module is expected to define a global dictionary named 'functions'
-that maps function names to Python functions, as follows:
+The imported module is expected to define a global dictionary named
+``functions`` that maps function names to Python functions, as follows:
 
-  def my_fn(kconf, name, arg_1, arg_2, ...):
-      # kconf:
-      #   Kconfig instance
-      #
-      # name:
-      #   Name of the user-defined function ("my-fn"). Think argv[0].
-      #
-      # arg_1, arg_2, ...:
-      #   Arguments passed to the function from Kconfig (strings)
-      #
-      # Returns a string to be substituted as the result of calling the
-      # function
-      ...
+.. code-block:: python
 
-  def my_other_fn(kconf, name, arg_1, arg_2, ...):
-      ...
+   def my_fn(kconf, name, arg_1, arg_2, ...):
+       # kconf:
+       #   Kconfig instance
+       #
+       # name:
+       #   Name of the user-defined function ("my-fn"). Think argv[0].
+       #
+       # arg_1, arg_2, ...:
+       #   Arguments passed to the function from Kconfig (strings)
+       #
+       # Returns a string to be substituted as the result of calling the
+       # function
+       ...
 
-  functions = {
-      "my-fn":       (my_fn,       <min.args>, <max.args>/None),
-      "my-other-fn": (my_other_fn, <min.args>, <max.args>/None),
-      ...
-  }
+   def my_other_fn(kconf, name, arg_1, arg_2, ...):
+       ...
 
-  ...
+   functions = {
+       "my-fn":       (my_fn,       <min.args>, <max.args>/None),
+       "my-other-fn": (my_other_fn, <min.args>, <max.args>/None),
+       ...
+   }
 
-<min.args> and <max.args> are the minimum and maximum number of arguments
-expected by the function (excluding the implicit 'name' argument). If
-<max.args> is None, there is no upper limit to the number of arguments. Passing
-an invalid number of arguments will generate a KconfigError exception.
+``<min.args>`` and ``<max.args>`` are the minimum and maximum number of
+arguments expected by the function (excluding the implicit ``name`` argument).
+If ``<max.args>`` is ``None``, there is no upper limit to the number of
+arguments. Passing an invalid number of arguments will raise
+:class:`KconfigError`.
 
-Functions can access the current parsing location as kconf.loc, or individually
-as kconf.filename/linenr. Accessing other fields of the Kconfig object is not
-safe. See the warning below.
+Functions can access the current parsing location as ``kconf.loc``, or
+individually as ``kconf.filename`` and ``kconf.linenr``. Accessing other fields
+of the :class:`Kconfig` object is not safe. See the warning below.
 
-Keep in mind that for a variable defined like 'foo = $(fn)', 'fn' will be
-called only when 'foo' is expanded. If 'fn' uses the parsing location and the
-intent is to use the location of the assignment, you want 'foo := $(fn)'
+Keep in mind that for a variable defined like ``foo = $(fn)``, ``fn`` will be
+called only when ``foo`` is expanded. If ``fn`` uses the parsing location and
+the intent is to use the location of the assignment, you want ``foo := $(fn)``
 instead, which calls the function immediately.
 
 Once defined, user functions can be called from Kconfig in the same way as
 other preprocessor functions:
 
-    config FOO
-        ...
-        depends on $(my-fn,arg1,arg2)
+.. code-block:: kconfig
 
-If my_fn() returns "n", this will result in
+   config FOO
+       ...
+       depends on $(my-fn,arg1,arg2)
 
-    config FOO
-        ...
-        depends on n
+If ``my_fn()`` returns ``"n"``, this will result in:
 
-Warning
-*******
+.. code-block:: kconfig
 
-User-defined preprocessor functions are called as they're encountered at parse
-time, before all Kconfig files have been processed, and before the menu tree
-has been finalized. There are no guarantees that accessing Kconfig symbols or
-the menu tree via the 'kconf' parameter will work, and it could potentially
-lead to a crash.
+   config FOO
+       ...
+       depends on n
+
+.. warning::
+
+   User-defined preprocessor functions are called as they are encountered at
+   parse time, before all Kconfig files have been processed and before the menu
+   tree has been finalized. There are no guarantees that accessing Kconfig
+   symbols or the menu tree via the ``kconf`` parameter will work, and it could
+   potentially lead to a crash.
 
 Preferably, user-defined functions should be stateless.
 
@@ -866,7 +951,7 @@ class Kconfig(object):
     missing_syms:
       A list with (name, value) tuples for all assignments to undefined symbols
       within the most recently loaded .config file(s). 'name' is the symbol
-      name without the 'CONFIG_' prefix. 'value' is a string that gives the
+      name without the ``CONFIG_`` prefix. 'value' is a string that gives the
       right-hand side of the assignment verbatim.
 
       See Kconfig.load_config() as well.
@@ -888,10 +973,10 @@ class Kconfig(object):
       if multiple configurations are loaded with different values for $srctree.
 
     config_prefix:
-      The value the CONFIG_ environment variable had when the Kconfig instance
-      was created, or "CONFIG_" if CONFIG_ wasn't set. This is the prefix used
-      (and expected) on symbol names in .config files and C headers. Used in
-      the same way in the C tools.
+      The value the ``CONFIG_`` environment variable had when the Kconfig
+      instance was created, or ``CONFIG_`` if ``CONFIG_`` wasn't set. This is
+      the prefix used (and expected) on symbol names in .config files and C
+      headers. Used in the same way in the C tools.
 
     config_header:
       The value the KCONFIG_CONFIG_HEADER environment variable had when the
@@ -1525,7 +1610,7 @@ class Kconfig(object):
 
         header (default: None):
           Text inserted verbatim at the beginning of the file. You would
-          usually want it enclosed in '/* */' to make it a C comment, and
+          usually want it enclosed in ``/* */`` to make it a C comment, and
           include a trailing newline.
 
           If None (the default), the value of the environment variable
@@ -2081,7 +2166,7 @@ class Kconfig(object):
         that holds the top-level items.
 
         As an example, the following code will produce a list equal to
-        Kconfig.defined_syms:
+        Kconfig.defined_syms::
 
           defined_syms = [node.item for node in kconf.node_iter()
                           if isinstance(node.item, Symbol)]
@@ -4157,7 +4242,7 @@ class Kconfig(object):
 
 class Symbol(object):
     """
-    Represents a configuration symbol:
+    Represents a configuration symbol::
 
       (menu)config FOO
           ...
@@ -4227,12 +4312,13 @@ class Symbol(object):
       visibility n. The other possible values are (0, 2), (0, 1, 2), (1, 2),
       (1,), and (2,). A (1,) or (2,) result means the symbol is visible but
       "locked" to m or y through a select, perhaps in combination with the
-      visibility. menuconfig represents this as -M- and -*-, respectively.
+      visibility. menuconfig represents this as ``-M-`` and ``-*-``,
+      respectively.
 
       For string/hex/int symbols, check if Symbol.visibility is non-0 (non-n)
       instead to determine if the value can be changed.
 
-      Some handy 'assignable' idioms:
+      Some handy 'assignable' idioms::
 
         # Is 'sym' an assignable (visible) bool/tristate symbol?
         if sym.assignable:
@@ -4266,12 +4352,14 @@ class Symbol(object):
       - "select", when it was set by a 'select' statement on another symbol
       - "imply", when it was set by an 'imply' statement on another symbol
       - "unset", when none of the above applied
+
       The location can be either:
-       - None, if the value is unset, has an implicit default, or no location
-         was provided in set_value();
-       - a (filename, linenr) tuple, if the value was set by a single line;
-       - a list of strings describing the conditions that resulted in the
-         value being set, in case of reverse dependencies (select and imply).
+
+      - None, if the value is unset, has an implicit default, or no location
+        was provided in set_value();
+      - a (filename, linenr) tuple, if the value was set by a single line;
+      - a list of strings describing the conditions that resulted in the
+        value being set, in case of reverse dependencies (select and imply).
 
     config_string:
       The .config assignment string that would get written out for the symbol
@@ -4288,7 +4376,7 @@ class Symbol(object):
 
       Tip: This field is useful when generating custom configuration output,
       even for non-.config-like formats. To write just the symbols that would
-      get written out to .config files, do this:
+      get written out to .config files, do this::
 
         if sym.config_string:
             *Write symbol, e.g. by looking sym.str_value*
@@ -4301,7 +4389,7 @@ class Symbol(object):
       n-valued symbol entries in there.
 
     name_and_loc:
-      Holds a string like
+      Holds a string like ::
 
         "MY_SYMBOL (defined at foo/Kconfig:12, bar/Kconfig:14)"
 
@@ -4354,10 +4442,7 @@ class Symbol(object):
       than plain integers. Undefined symbols get their name as their string
       value, so this works out. The C tools work the same way.
 
-    orig_defaults:
-    orig_selects:
-    orig_implies:
-    orig_ranges:
+    orig_defaults, orig_selects, orig_implies, orig_ranges:
       See the corresponding attributes on the MenuNode class.
 
     rev_dep:
@@ -4394,7 +4479,7 @@ class Symbol(object):
 
       For the following definitions, only B and not C appears in A's
       'referenced'. To get transitive references, you'll have to recursively
-      expand 'references' until no new items appear.
+      expand 'references' until no new items appear. ::
 
         config A
                 bool
@@ -5240,7 +5325,7 @@ class Symbol(object):
 
 class Choice(object):
     """
-    Represents a choice statement:
+    Represents a choice statement::
 
       choice
           ...
@@ -5349,7 +5434,7 @@ class Choice(object):
       See the Symbol class documentation. Acts on the value (mode).
 
     name_and_loc:
-      Holds a string like
+      Holds a string like ::
 
         "<choice MY_CHOICE> (defined at foo/Kconfig:12)"
 
@@ -5791,15 +5876,11 @@ class MenuNode(object):
     ranges:
       Like MenuNode.defaults, for ranges.
 
-    orig_prompt:
-    orig_defaults:
-    orig_selects:
-    orig_implies:
-    orig_ranges:
-      These work the like the corresponding attributes without orig_*, but omit
-      any dependencies propagated from 'depends on' and surrounding 'if's (the
-      direct dependencies, stored in MenuNode.dep). These also strip any
-      location information.
+    orig_prompt, orig_defaults, orig_selects, orig_implies, orig_ranges:
+      These work the like the corresponding attributes without ``orig_*``,
+      but omit any dependencies propagated from 'depends on' and surrounding
+      'if's (the direct dependencies, stored in MenuNode.dep). These also
+      strip any location information.
 
       One use for this is generating less cluttered documentation, by only
       showing the direct dependencies in one place.
@@ -6421,7 +6502,7 @@ def split_expr(expr, op):
       hardcoded functions.)
 
 
-    Pseudo-code examples:
+    Pseudo-code examples::
 
       split_expr( A                    , OR  )  ->  [A]
       split_expr( A && B               , OR  )  ->  [A && B]
@@ -6483,6 +6564,14 @@ def standard_kconfig(description=None):
       The 'description' passed to argparse.ArgumentParser().
       argparse.RawDescriptionHelpFormatter is used, so formatting is preserved.
     """
+    parser = _get_standard_arg_parser(description)
+    return Kconfig(parser.parse_args().kconfig, suppress_traceback=True)
+
+
+def _get_standard_arg_parser(description=None):
+    # Kept separate from standard_kconfig() so documentation generators can
+    # inspect the command-line interface without parsing arguments or loading a
+    # Kconfig tree.
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -6496,7 +6585,7 @@ def standard_kconfig(description=None):
         nargs="?",
         help="Top-level Kconfig file (default: Kconfig)")
 
-    return Kconfig(parser.parse_args().kconfig, suppress_traceback=True)
+    return parser
 
 
 def standard_config_filename():

@@ -4,36 +4,39 @@
 # SPDX-License-Identifier: ISC
 
 """
-Generates a header file with #defines from the configuration, matching the
-format of include/generated/autoconf.h in the Linux kernel.
+Generates a header file with ``#define`` directives from the configuration,
+matching the format of ``include/generated/autoconf.h`` in the Linux kernel.
 
-Optionally, also writes the configuration output as a .config file. See
---config-out.
+Optionally, also writes the configuration output as a ``.config`` file. See
+``--config-out``.
 
 The configuration can also be written as a CMake include file. See
---cmake-out.
+``--cmake-out``.
 
-The --sync-deps, --file-list, and --env-list options generate information that
-can be used to avoid needless rebuilds/reconfigurations.
+The ``--sync-deps``, ``--file-list``, and ``--env-list`` options generate
+information that can be used to avoid needless rebuilds/reconfigurations.
 
 Before writing a header or configuration file, Kconfiglib compares the old
 contents of the file against the new contents. If there's no change, the write
 is skipped. This avoids updating file metadata like the modification time, and
 might save work depending on your build setup.
 
-By default, the configuration is generated from '.config'. A different
-configuration file can be passed in the KCONFIG_CONFIG environment variable.
+By default, the configuration is generated from ``.config``. A different
+configuration file can be passed in the ``KCONFIG_CONFIG`` environment
+variable.
 
 A custom header string can be inserted at the beginning of generated
-configuration and header files by setting the KCONFIG_CONFIG_HEADER and
-KCONFIG_AUTOHEADER_HEADER environment variables, respectively (this also works
-for other scripts). The string is not automatically made a comment (this is by
-design, to allow anything to be added), and no trailing newline is added, so
-add '/* */', '#', and newlines as appropriate.
+configuration and header files by setting the ``KCONFIG_CONFIG_HEADER`` and
+``KCONFIG_AUTOHEADER_HEADER`` environment variables, respectively (this also
+works for other scripts). The string is not automatically made a comment (this
+is by design, to allow anything to be added), and no trailing newline is added,
+so add ``/* ... */``, ``#``, and newlines as appropriate.
 
-See https://www.gnu.org/software/make/manual/make.html#Multi_002dLine for a
-handy way to define multi-line variables in makefiles, for use with custom
-headers. Remember to export the variable to the environment.
+See `Defining Multi-Line Variables
+<https://www.gnu.org/software/make/manual/make.html#Multi_002dLine>`_ in the
+GNU Make manual for a handy way to define multi-line variables in makefiles
+for use with custom headers. Remember to export the variable to the
+environment.
 """
 import argparse
 import os
@@ -45,7 +48,7 @@ import kconfiglib
 DEFAULT_SYNC_DEPS_PATH = "deps/"
 
 
-def main():
+def _get_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__)
@@ -118,7 +121,11 @@ only supported for backwards compatibility).
         default="Kconfig",
         help="Top-level Kconfig file (default: Kconfig)")
 
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = _get_parser().parse_args()
 
 
     kconf = kconfiglib.Kconfig(args.kconfig, suppress_traceback=True)

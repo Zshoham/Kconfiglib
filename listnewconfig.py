@@ -8,8 +8,8 @@ Lists all user-modifiable symbols that are not given a value in the
 configuration file. Usually, these are new symbols that have been added to the
 Kconfig files.
 
-The default configuration filename is '.config'. A different filename can be
-passed in the KCONFIG_CONFIG environment variable.
+The default configuration filename is ``.config``. A different filename can be
+passed in the ``KCONFIG_CONFIG`` environment variable.
 """
 from __future__ import print_function
 
@@ -20,7 +20,7 @@ import textwrap
 from kconfiglib import Kconfig, BOOL, TRISTATE, INT, HEX, STRING, TRI_TO_STR
 
 
-def main():
+def _get_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__)
@@ -37,7 +37,11 @@ def main():
         default="Kconfig",
         help="Top-level Kconfig file (default: Kconfig)")
 
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = _get_parser().parse_args()
 
     kconf = Kconfig(args.kconfig, suppress_traceback=True)
     # Make it possible to filter this message out

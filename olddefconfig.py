@@ -4,18 +4,22 @@
 # SPDX-License-Identifier: ISC
 
 """
-Updates an old .config file or creates a new one, by filling in default values
+Updates an old ``.config`` file or creates a new one, by filling in default values
 for all new symbols. This is the same as picking the default selection for all
-symbols in oldconfig, or entering the menuconfig interface and immediately
+symbols in ``oldconfig``, or entering the menuconfig interface and immediately
 saving.
 
-The default input/output filename is '.config'. A different filename can be
-passed in the KCONFIG_CONFIG environment variable.
+The default input/output filename is ``.config``. A different filename can be
+passed in the ``KCONFIG_CONFIG`` environment variable.
 
 When overwriting a configuration file, the old version is saved to
-<filename>.old (e.g. .config.old).
+``<filename>.old`` (e.g. ``.config.old``).
 """
 import kconfiglib
+
+
+def _get_parser():
+    return kconfiglib._get_standard_arg_parser(__doc__)
 
 
 def main():

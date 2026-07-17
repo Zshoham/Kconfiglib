@@ -4,19 +4,23 @@
 # SPDX-License-Identifier: ISC
 
 """
-Writes a configuration file where as many symbols as possible are set to 'n'.
+Writes a configuration file where as many symbols as possible are set to ``n``.
 
-The default output filename is '.config'. A different filename can be passed
-in the KCONFIG_CONFIG environment variable.
+The default output filename is ``.config``. A different filename can be passed
+in the ``KCONFIG_CONFIG`` environment variable.
 
-Usage for the Linux kernel:
+Usage for the Linux kernel::
 
-  $ make [ARCH=<arch>] scriptconfig SCRIPT=Kconfiglib/allnoconfig.py
+    $ make [ARCH=<arch>] scriptconfig SCRIPT=Kconfiglib/allnoconfig.py
 """
 
 # See examples/allnoconfig_walk.py for another way to implement this script
 
 import kconfiglib
+
+
+def _get_parser():
+    return kconfiglib._get_standard_arg_parser(__doc__)
 
 
 def main():

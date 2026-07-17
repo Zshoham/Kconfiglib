@@ -8,180 +8,224 @@ Overview
 ========
 
 A curses-based Python 3 menuconfig implementation. The interface should feel
-familiar to people used to mconf ('make menuconfig').
+familiar to people used to mconf (``make menuconfig``).
 
 Supports the same keys as mconf, and also supports a set of keybindings
 inspired by Vi:
 
-  J/K     : Down/Up
-  L       : Enter menu/Toggle item
-  H       : Leave menu
-  Ctrl-D/U: Page Down/Page Up
-  G/End   : Jump to end of list
-  g/Home  : Jump to beginning of list
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
 
-[Space] toggles values if possible, and enters menus otherwise. [Enter] works
-the other way around.
+   * - Key
+     - Action
+   * - :kbd:`J` / :kbd:`K`
+     - Move down / up.
+   * - :kbd:`L`
+     - Enter a menu or toggle an item.
+   * - :kbd:`H`
+     - Leave the current menu.
+   * - :kbd:`Ctrl-D` / :kbd:`Ctrl-U`
+     - Move one page down / up.
+   * - :kbd:`G` / :kbd:`End`
+     - Jump to the end of the list.
+   * - :kbd:`g` / :kbd:`Home`
+     - Jump to the beginning of the list.
+
+:kbd:`Space` toggles values if possible and enters menus otherwise.
+:kbd:`Enter` works the other way around.
 
 The mconf feature where pressing a key jumps to a menu entry with that
 character in it in the current menu isn't supported. A jump-to feature for
 jumping directly to any symbol (including invisible symbols), choice, menu or
-comment (as in a Kconfig 'comment "Foo"') is available instead.
+comment (as in ``comment "Foo"``) is available instead.
 
 A few different modes are available:
 
-  F: Toggle show-help mode, which shows the help text of the currently selected
-  item in the window at the bottom of the menu display. This is handy when
-  browsing through options.
+:kbd:`F`
+   Toggle show-help mode, which shows the help text of the currently selected
+   item in the window at the bottom of the menu display. This is handy when
+   browsing through options.
 
-  C: Toggle show-name mode, which shows the symbol name before each symbol menu
-  entry
+:kbd:`C`
+   Toggle show-name mode, which shows the symbol name before each symbol menu
+   entry.
 
-  A: Toggle show-all mode, which shows all items, including currently invisible
-  items and items that lack a prompt. Invisible items are drawn in a different
-  style to make them stand out.
+:kbd:`A`
+   Toggle show-all mode, which shows all items, including currently invisible
+   items and items that lack a prompt. Invisible items are drawn in a different
+   style to make them stand out.
 
 
 Running
 =======
 
-menuconfig.py can be run either as a standalone executable or by calling the
-menuconfig() function with an existing Kconfig instance. The second option is a
-bit inflexible in that it will still load and save .config, etc.
+``menuconfig.py`` can be run either as a standalone executable or by calling
+:func:`menuconfig` with an existing :class:`kconfiglib.Kconfig` instance. The
+second option is a bit inflexible in that it will still load and save
+``.config``, etc.
 
 When run in standalone mode, the top-level Kconfig file to load can be passed
-as a command-line argument. With no argument, it defaults to "Kconfig".
+as a command-line argument. With no argument, it defaults to ``Kconfig``.
 
-The KCONFIG_CONFIG environment variable specifies the .config file to load (if
-it exists) and save. If KCONFIG_CONFIG is unset, ".config" is used.
+The ``KCONFIG_CONFIG`` environment variable specifies the ``.config`` file to
+load (if it exists) and save. If ``KCONFIG_CONFIG`` is unset, ``.config`` is
+used.
 
 When overwriting a configuration file, the old version is saved to
-<filename>.old (e.g. .config.old).
+``<filename>.old`` (e.g. ``.config.old``).
 
-$srctree is supported through Kconfiglib.
+``$srctree`` is supported through Kconfiglib.
 
 
 Color schemes
 =============
 
-It is possible to customize the color scheme by setting the MENUCONFIG_STYLE
-environment variable. For example, setting it to 'aquatic' will enable an
-alternative, less yellow, more 'make menuconfig'-like color scheme, contributed
-by Mitja Horvat (pinkfluid).
+It is possible to customize the color scheme by setting the
+``MENUCONFIG_STYLE`` environment variable. For example, setting it to
+``aquatic`` will enable an alternative, less yellow, more
+``make menuconfig``-like color scheme, contributed by Mitja Horvat
+(``pinkfluid``).
 
 This is the current list of built-in styles:
-    - default       classic Kconfiglib theme with a yellow accent
-    - monochrome    colorless theme (uses only bold and standout) attributes,
-                    this style is used if the terminal doesn't support colors
-    - aquatic       blue-tinted style loosely resembling the lxdialog theme
+
+``default``
+   Classic Kconfiglib theme with a yellow accent.
+
+``monochrome``
+   Colorless theme using only bold and standout attributes. This style is used
+   if the terminal does not support colors.
+
+``aquatic``
+   Blue-tinted style loosely resembling the lxdialog theme.
 
 It is possible to customize the current style by changing colors of UI
 elements on the screen. This is the list of elements that can be stylized:
 
-    - path          Top row in the main display, with the menu path
-    - separator     Separator lines between windows. Also used for the top line
-                    in the symbol information display.
-    - list          List of items, e.g. the main display
-    - selection     Style for the selected item
-    - inv-list      Like list, but for invisible items. Used in show-all mode.
-    - inv-selection Like selection, but for invisible items. Used in show-all
-                    mode.
-    - help          Help text windows at the bottom of various fullscreen
-                    dialogs
-    - show-help     Window showing the help text in show-help mode
-    - frame         Frame around dialog boxes
-    - body          Body of dialog boxes
-    - edit          Edit box in pop-up dialogs
-    - jump-edit     Edit box in jump-to dialog
-    - text          Symbol information text
+``path``
+   Top row in the main display, with the menu path.
+``separator``
+   Separator lines between windows. Also used for the top line in the symbol
+   information display.
+``list``
+   List of items, e.g. the main display.
+``selection``
+   Style for the selected item.
+``inv-list``
+   Like ``list``, but for invisible items. Used in show-all mode.
+``inv-selection``
+   Like ``selection``, but for invisible items. Used in show-all mode.
+``help``
+   Help text windows at the bottom of various full-screen dialogs.
+``show-help``
+   Window showing the help text in show-help mode.
+``frame``
+   Frame around dialog boxes.
+``body``
+   Body of dialog boxes.
+``edit``
+   Edit box in pop-up dialogs.
+``jump-edit``
+   Edit box in the jump-to dialog.
+``text``
+   Symbol information text.
 
-The color definition is a comma separated list of attributes:
+The color definition is a comma-separated list of attributes:
 
-    - fg:COLOR      Set the foreground/background colors. COLOR can be one of
-      * or *        the basic 16 colors (black, red, green, yellow, blue,
-    - bg:COLOR      magenta, cyan, white and brighter versions, for example,
-                    brightred). On terminals that support more than 8 colors,
-                    you can also directly put in a color number, e.g. fg:123
-                    (hexadecimal and octal constants are accepted as well).
-                    Colors outside the range -1..curses.COLORS-1 (which is
-                    terminal-dependent) are ignored (with a warning). The COLOR
-                    can be also specified using a RGB value in the HTML
-                    notation, for example #RRGGBB. If the terminal supports
-                    color changing, the color is rendered accurately.
-                    Otherwise, the visually nearest color is used.
+``fg:COLOR`` or ``bg:COLOR``
+   Set the foreground or background color. ``COLOR`` can be one of the basic
+   16 colors (``black``, ``red``, ``green``, ``yellow``, ``blue``,
+   ``magenta``, ``cyan``, ``white``, and brighter versions such as
+   ``brightred``).
 
-                    If the background or foreground color of an element is not
-                    specified, it defaults to -1, representing the default
-                    terminal foreground or background color.
+   On terminals that support more than eight colors, a color number can be
+   used directly, e.g. ``fg:123``. Hexadecimal and octal constants are
+   accepted as well. Colors outside the terminal-dependent range
+   ``-1..curses.COLORS-1`` are ignored with a warning.
 
-                    Note: On some terminals a bright version of the color
-                    implies bold.
-    - bold          Use bold text
-    - underline     Use underline text
-    - standout      Standout text attribute (reverse color)
+   ``COLOR`` can also be an RGB value in HTML notation, such as ``#RRGGBB``.
+   If the terminal supports changing colors, the color is rendered accurately.
+   Otherwise, the visually nearest color is used.
+
+   If an element's background or foreground color is not specified, it
+   defaults to ``-1``, representing the terminal's default foreground or
+   background color.
+
+   .. note::
+
+      On some terminals, a bright version of a color implies bold.
+
+``bold``
+   Use bold text.
+``underline``
+   Use underlined text.
+``standout``
+   Use the standout text attribute (reverse color).
 
 More often than not, some UI elements share the same color definition. In such
-cases the right value may specify an UI element from which the color definition
-will be copied. For example, "separator=help" will apply the current color
-definition for "help" to "separator".
+cases the right value may specify a UI element from which the color definition
+will be copied. For example, ``separator=help`` will apply the current color
+definition for ``help`` to ``separator``.
 
-A keyword without the '=' is assumed to be a style template. The template name
+A keyword without ``=`` is assumed to be a style template. The template name
 is looked up in the built-in styles list and the style definition is expanded
-in-place. With this, built-in styles can be used as basis for new styles.
+in place. With this, built-in styles can be used as a basis for new styles.
 
-For example, take the aquatic theme and give it a red selection bar:
+For example, take the aquatic theme and give it a red selection bar::
 
-MENUCONFIG_STYLE="aquatic selection=fg:white,bg:red"
+    MENUCONFIG_STYLE="aquatic selection=fg:white,bg:red"
 
 If there's an error in the style definition or if a missing style is assigned
 to, the assignment will be ignored, along with a warning being printed on
 stderr.
 
-The 'default' theme is always implicitly parsed first, so the following two
+The ``default`` theme is always implicitly parsed first, so the following two
 settings have the same effect:
 
-    MENUCONFIG_STYLE="selection=fg:white,bg:red"
-    MENUCONFIG_STYLE="default selection=fg:white,bg:red"
+.. code-block:: shell
 
-If the terminal doesn't support colors, the 'monochrome' theme is used, and
-MENUCONFIG_STYLE is ignored. The assumption is that the environment is broken
-somehow, and that the important thing is to get something usable.
+   MENUCONFIG_STYLE="selection=fg:white,bg:red"
+   MENUCONFIG_STYLE="default selection=fg:white,bg:red"
+
+If the terminal does not support colors, the ``monochrome`` theme is used and
+``MENUCONFIG_STYLE`` is ignored. The assumption is that the environment is
+broken somehow, and that the important thing is to get something usable.
 
 
 Other features
 ==============
 
-  - Seamless terminal resizing
+* Seamless terminal resizing.
 
-  - No dependencies on *nix, as the 'curses' module is in the Python standard
-    library
+* No dependencies on ``*nix``, as the :mod:`curses` module is in the Python
+  standard library.
 
-  - Unicode text entry
+* Unicode text entry.
 
-  - Improved information screen compared to mconf:
+* Improved information screen compared to mconf:
 
-      * Expressions are split up by their top-level &&/|| operands to improve
-        readability
+  * Expressions are split up by their top-level ``&&``/``||`` operands to
+    improve readability.
 
-      * Undefined symbols in expressions are pointed out
+  * Undefined symbols in expressions are pointed out.
 
-      * Menus and comments have information displays
+  * Menus and comments have information displays.
 
-      * Kconfig definitions are printed
+  * Kconfig definitions are printed.
 
-      * The include path is shown, listing the locations of the 'source'
-        statements that included the Kconfig file of the symbol (or other
-        item)
+  * The include path is shown, listing the locations of the ``source``
+    statements that included the Kconfig file of the symbol (or other item).
 
 
 Limitations
 ===========
 
-Doesn't work out of the box on Windows, but can be made to work with
+Does not work out of the box on Windows, but can be made to work with::
 
-    pip install windows-curses
+    $ pip install windows-curses
 
-See the https://github.com/zephyrproject-rtos/windows-curses repository.
+See the `windows-curses repository
+<https://github.com/zephyrproject-rtos/windows-curses>`_.
 """
 from __future__ import print_function
 
@@ -221,7 +265,8 @@ from kconfiglib import Symbol, Choice, MENU, COMMENT, MenuNode, \
                        expr_str, expr_value, split_expr, \
                        standard_sc_expr_str, \
                        TRI_TO_STR, TYPE_TO_STR, \
-                       standard_kconfig, standard_config_filename
+                       standard_kconfig, standard_config_filename, \
+                       _get_standard_arg_parser
 
 
 #
@@ -657,6 +702,10 @@ def _style_attr(fg_color, bg_color, attribs, color_attribs={}):
 #
 # Main application
 #
+
+
+def _get_parser():
+    return _get_standard_arg_parser(__doc__)
 
 
 def _main():

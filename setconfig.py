@@ -6,19 +6,21 @@
 """
 Simple utility for setting configuration values from the command line.
 
-Sample usage:
+Sample usage::
 
-  $ setconfig FOO_SUPPORT=y BAR_BITS=8
+    $ setconfig FOO_SUPPORT=y BAR_BITS=8
 
-Note: Symbol names should not be prefixed with 'CONFIG_'.
+.. note::
+
+   Symbol names should not be prefixed with ``CONFIG_``.
 
 The exit status on errors is 1.
 
-The default input/output configuration file is '.config'. A different filename
-can be passed in the KCONFIG_CONFIG environment variable.
+The default input/output configuration file is ``.config``. A different
+filename can be passed in the ``KCONFIG_CONFIG`` environment variable.
 
 When overwriting a configuration file, the old version is saved to
-<filename>.old (e.g. .config.old).
+``<filename>.old`` (e.g. ``.config.old``).
 """
 import argparse
 import sys
@@ -26,7 +28,7 @@ import sys
 import kconfiglib
 
 
-def main():
+def _get_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__)
@@ -57,7 +59,11 @@ def main():
         nargs="*",
         help="A 'NAME=value' assignment")
 
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = _get_parser().parse_args()
 
     kconf = kconfiglib.Kconfig(args.kconfig, suppress_traceback=True)
     print(kconf.load_config())

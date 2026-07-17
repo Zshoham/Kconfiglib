@@ -4,16 +4,20 @@
 # SPDX-License-Identifier: ISC
 
 """
-Writes a configuration file where as many symbols as possible are set to 'm'.
+Writes a configuration file where as many symbols as possible are set to ``m``.
 
-The default output filename is '.config'. A different filename can be passed
-in the KCONFIG_CONFIG environment variable.
+The default output filename is ``.config``. A different filename can be passed
+in the ``KCONFIG_CONFIG`` environment variable.
 
-Usage for the Linux kernel:
+Usage for the Linux kernel::
 
-  $ make [ARCH=<arch>] scriptconfig SCRIPT=Kconfiglib/allmodconfig.py
+    $ make [ARCH=<arch>] scriptconfig SCRIPT=Kconfiglib/allmodconfig.py
 """
 import kconfiglib
+
+
+def _get_parser():
+    return kconfiglib._get_standard_arg_parser(__doc__)
 
 
 def main():
