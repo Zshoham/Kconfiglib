@@ -13,9 +13,11 @@ Configuration generation and maintenance
 ``genconfig``
 ^^^^^^^^^^^^^
 
-Generate a C header and, optionally, normalized configuration, CMake,
-dependency, sourced-file, and environment-variable outputs. Input values come
-from ``.config`` or the path selected by ``KCONFIG_CONFIG``.
+Generate a C configuration header and, optionally, copy the
+``kconfig_macros.h`` extra macros or embed them in the configuration header.
+Normalized configuration, CMake, dependency, sourced-file, and environment-
+variable outputs are also available. Input values come from ``.config`` or the
+path selected by ``KCONFIG_CONFIG``.
 
 .. argparse::
    :module: genconfig

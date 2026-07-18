@@ -2113,9 +2113,11 @@ CONFIG_MODULE;CONFIG_NUMBER;CONFIG_ADDRESS;CONFIG_TEXT")
         c.syms["TEXT"].set_value(text)
         verify_cmake_config(c, config_test_file)
 
-    test_cmake_module()
+    test_genconfig_header_discovery()
+    test_genconfig_copy_preflight()
 
-    test_c_config_helpers()
+    test_cmake_module()
+    test_c_config_macros()
 
     # Test header strings in configuration files and headers
 
@@ -2141,10 +2143,14 @@ CONFIG_FOO=y
     verify_file_contents(config_test_file, """\
 config header from env.
 """)
-    c.write_autoconf(config_test_file, header="header header from param\n")
+    c.write_autoconf(
+        config_test_file,
+        header="header header from param\n",
+        footer="header footer from param\n")
     verify_file_contents(config_test_file, """\
 header header from param
 #define CONFIG_FOO 1
+header footer from param
 """)
     c.write_autoconf(config_test_file)
     verify_file_contents(config_test_file, """\
@@ -3319,14 +3325,253 @@ def verify_cmake_config(kconf, filename):
            "generated CMake values do not match Kconfig symbol values")
 
 
-def test_c_config_helpers():
-    print("Testing C configuration helpers")
-    compiler = shutil.which("cc")
-    if compiler is None:
-        print("Skipping C configuration helper test (cc was not found).")
-        return
+def test_genconfig_header_discovery():
+    print("Testing genconfig kconfig_macros.h discovery")
+    import site
+    import genconfig
+
+    prefix = os.path.join(tempfile.gettempdir(), "z-kconfiglib-prefix")
+    module_install_dir = os.path.join(
+        prefix, "lib", "python", "site-packages")
+    verify(
+        genconfig._data_root_for_module_dir(
+            module_install_dir, prefix, module_install_dir) == prefix,
+        "could not infer a pip --prefix data root")
+
+    original_file = genconfig.__file__
+    original_isfile = os.path.isfile
+    original_user_base = site.USER_BASE
+    original_get_scheme_names = genconfig.sysconfig.get_scheme_names
+    original_get_paths = genconfig.sysconfig.get_paths
+    try:
+        site.USER_BASE = os.path.join(
+            tempfile.gettempdir(), "a-kconfiglib-user-base")
+        expected = os.path.join(
+            prefix, "share", "kconfiglib", "kconfig_macros.h")
+        fallback = os.path.join(
+            site.USER_BASE, "share", "kconfiglib", "kconfig_macros.h")
+        genconfig.__file__ = os.path.join(
+            module_install_dir, "genconfig.py")
+        genconfig.sysconfig.get_scheme_names = lambda: ("test",)
+        def test_scheme_paths(scheme=None, vars=None, expand=True):
+            return {
+                "data": prefix,
+                "purelib": module_install_dir,
+                "platlib": module_install_dir,
+            }
+        genconfig.sysconfig.get_paths = test_scheme_paths
+        os.path.isfile = lambda path: path in (expected, fallback)
+        verify(genconfig._find_kconfig_macros() == expected,
+               "did not prefer macros from the module installation")
+
+        genconfig.__file__ = os.path.join(
+            tempfile.gettempdir(), "unrelated", "genconfig.py")
+        genconfig.sysconfig.get_scheme_names = lambda: ()
+        expected = fallback
+        os.path.isfile = lambda path: path == expected
+        verify(genconfig._find_kconfig_macros() == expected,
+               "could not find macros below site.USER_BASE")
+
+        os.path.isfile = lambda path: False
+        try:
+            genconfig._find_kconfig_macros()
+        except SystemExit as e:
+            verify(str(e).startswith(
+                "error: could not find kconfig_macros.h (looked in "),
+                "missing kconfig_macros.h did not produce a clean error")
+        else:
+            fail("missing kconfig_macros.h did not terminate genconfig")
+    finally:
+        genconfig.__file__ = original_file
+        os.path.isfile = original_isfile
+        site.USER_BASE = original_user_base
+        genconfig.sysconfig.get_scheme_names = original_get_scheme_names
+        genconfig.sysconfig.get_paths = original_get_paths
+
+
+def test_genconfig_copy_preflight():
+    print("Testing genconfig kconfig_macros.h copy preflight")
+    import builtins
+    import genconfig
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        macros_source = os.path.join(tmpdir, "unreadable-kconfig_macros.h")
+        config_header = os.path.join(tmpdir, "config.h")
+        macros_copy = os.path.join(tmpdir, "kconfig_macros.h")
+        repo_dir = os.path.dirname(os.path.abspath(__file__))
+
+        original_argv = sys.argv
+        original_find_macros = genconfig._find_kconfig_macros
+        had_module_open = hasattr(genconfig, "open")
+        original_module_open = getattr(genconfig, "open", None)
+
+        def guarded_open(path, *args, **kwargs):
+            if os.fspath(path) == macros_source:
+                raise OSError("simulated unreadable extra macros")
+            return builtins.open(path, *args, **kwargs)
+
+        try:
+            sys.argv = [
+                "genconfig",
+                "--header-path", config_header,
+                "--kconfig-extra-macros", macros_copy,
+                os.path.join(repo_dir, "tests", "Kcmake"),
+            ]
+            genconfig._find_kconfig_macros = lambda: macros_source
+            genconfig.open = guarded_open
+            try:
+                genconfig.main()
+            except OSError as e:
+                verify("simulated unreadable extra macros" in str(e),
+                       "genconfig reported the wrong macros read error")
+            else:
+                fail("unreadable extra macros did not fail genconfig")
+            verify(not os.path.exists(config_header),
+                   "genconfig wrote config.h before reading its helper")
+        finally:
+            sys.argv = original_argv
+            genconfig._find_kconfig_macros = original_find_macros
+            if had_module_open:
+                genconfig.open = original_module_open
+            else:
+                del genconfig.open
+
+
+def test_c_config_macros():
+    print("Testing C configuration macros")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+
+        config_header = os.path.join(tmpdir, "config.h")
+        embedded_header = os.path.join(tmpdir, "embedded-config.h")
+        macros_header = os.path.join(tmpdir, "kconfig_macros.h")
+        make_config = os.path.join(tmpdir, "auto.conf")
+        repo_dir = os.path.dirname(os.path.abspath(__file__))
+        genconfig = os.path.join(repo_dir, "genconfig.py")
+        kconfig = os.path.join(repo_dir, "tests", "Kcmake")
+        genconfig_env = os.environ.copy()
+        genconfig_env["KCONFIG_CONFIG"] = os.path.join(
+            tmpdir, "nonexistent.config")
+        genconfig_command = [
+            sys.executable, genconfig,
+            "--header-path", config_header,
+            "--kconfig-extra-macros", macros_header,
+            "--config-out", make_config,
+            kconfig,
+        ]
+        result = subprocess.run(
+            genconfig_command, env=genconfig_env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        verify(result.returncode == 0,
+               "C and Make header generation failed:\n{}"
+               .format(result.stdout))
+        if result.returncode != 0:
+            return
+
+        embed_command = [
+            sys.executable, genconfig,
+            "--header-path", embedded_header,
+            "--embed-kconfig-extra-macros",
+            kconfig,
+        ]
+        result = subprocess.run(
+            embed_command, env=genconfig_env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        verify(result.returncode == 0,
+               "embedded C macros generation failed:\n{}"
+               .format(result.stdout))
+        if result.returncode != 0:
+            return
+
+        with open(macros_header, "rb") as generated:
+            with open(os.path.join(repo_dir, "kconfig_macros.h"), "rb") as source:
+                verify(generated.read() == source.read(),
+                       "generated kconfig_macros.h differs from its source")
+
+        with open(config_header, encoding="utf-8") as config:
+            config_contents = config.read()
+        with open(macros_header, encoding="utf-8") as macros:
+            macros_contents = macros.read()
+        with open(embedded_header, encoding="utf-8") as embedded:
+            verify(embedded.read() == config_contents + macros_contents,
+                   "embedded header does not contain config.h followed by "
+                   "kconfig_macros.h")
+
+        macros_stat = os.stat(macros_header)
+        os.utime(
+            macros_header,
+            ns=(macros_stat.st_atime_ns - 10_000_000_000,
+                macros_stat.st_mtime_ns - 10_000_000_000))
+        macros_mtime = os.stat(macros_header).st_mtime_ns
+        result = subprocess.run(
+            genconfig_command, env=genconfig_env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        verify(result.returncode == 0,
+               "repeated kconfig_macros.h generation failed:\n{}"
+               .format(result.stdout))
+        verify(os.stat(macros_header).st_mtime_ns == macros_mtime,
+               "unchanged kconfig_macros.h was rewritten")
+
+        embedded_stat = os.stat(embedded_header)
+        os.utime(
+            embedded_header,
+            ns=(embedded_stat.st_atime_ns - 10_000_000_000,
+                embedded_stat.st_mtime_ns - 10_000_000_000))
+        embedded_mtime = os.stat(embedded_header).st_mtime_ns
+        result = subprocess.run(
+            embed_command, env=genconfig_env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        verify(result.returncode == 0,
+               "repeated embedded C macros generation failed:\n{}"
+               .format(result.stdout))
+        verify(os.stat(embedded_header).st_mtime_ns == embedded_mtime,
+               "unchanged embedded configuration header was rewritten")
+        with open(make_config, encoding="utf-8") as f:
+            make_config_lines = set(f.read().splitlines())
+        verify("CONFIG_ENABLED=y" in make_config_lines,
+               "auto.conf does not enable CONFIG_ENABLED")
+        verify("CONFIG_MODULE=m" in make_config_lines,
+               "auto.conf does not set CONFIG_MODULE to module")
+
+        # GNU Make's "include" syntax is not portable to BSD make. Probe it
+        # explicitly; this check does not require a C compiler.
+        make = shutil.which("make")
+        if make is not None:
+            result = subprocess.run(
+                [make, "--version"], stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, universal_newlines=True)
+            if result.returncode != 0 or "GNU Make" not in result.stdout:
+                make = None
+
+        if make is not None:
+            makefile = os.path.join(tmpdir, "Makefile")
+            with open(makefile, "w", encoding="utf-8") as f:
+                f.write(textwrap.dedent("""\
+                    include auto.conf
+
+                    $(info KCONFIG_TEST_VALUES=$(CONFIG_ENABLED) $(CONFIG_MODULE))
+                    all:
+                    """))
+            result = subprocess.run(
+                [make, "--no-print-directory"], cwd=tmpdir,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                universal_newlines=True)
+            verify(result.returncode == 0,
+                   "GNU Make could not include auto.conf:\n{}"
+                   .format(result.stdout))
+            verify("KCONFIG_TEST_VALUES=y m" in result.stdout.splitlines(),
+                   "GNU Make did not load the expected auto.conf values:\n{}"
+                   .format(result.stdout))
+
+        compiler = shutil.which("cc")
+        if compiler is None:
+            print("Skipping C configuration macros test (cc was not found).")
+            return
+
         probe_source = os.path.join(tmpdir, "compiler-probe.c")
         probe_executable = os.path.join(tmpdir, "compiler-probe")
         with open(probe_source, "w", encoding="utf-8") as f:
@@ -3338,7 +3583,7 @@ def test_c_config_helpers():
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             universal_newlines=True)
         if result.returncode != 0:
-            print("Skipping C configuration helper test "
+            print("Skipping C configuration macros test "
                   "(cc does not support the required C99 flags).")
             return
 
@@ -3347,17 +3592,15 @@ def test_c_config_helpers():
                 [probe_executable], stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=True)
         except OSError as e:
-            print("Skipping C configuration helper test "
+            print("Skipping C configuration macros test "
                   "(compiled programs cannot run: {}).".format(e))
             return
         if result.returncode != 0:
-            print("Skipping C configuration helper test "
+            print("Skipping C configuration macros test "
                   "(compiler probe executable failed).")
             return
 
-        config_header = os.path.join(tmpdir, "config.h")
-        c = Kconfig("Kconfiglib/tests/Kcmake")
-        c.write_autoconf(config_header)
+
         with open(config_header, "a", encoding="utf-8") as f:
             f.write("#define CONFIG_ZERO 0\n#define ALT_ENABLED 1\n")
 
@@ -3365,8 +3608,12 @@ def test_c_config_helpers():
         executable = os.path.join(tmpdir, "helper-test")
         with open(source, "w", encoding="utf-8") as f:
             f.write(textwrap.dedent("""\
+                #ifdef KCONFIG_MACROS_EMBEDDED
+                #include "embedded-config.h"
+                #else
                 #include "config.h"
-                #include <kconfiglib.h>
+                #include <kconfig_macros.h>
+                #endif
                 #define CURRENT_MODULE 1
 
                 KCONFIG_SELECT_TRISTATE(CONFIG_ENABLED,
@@ -3425,11 +3672,13 @@ def test_c_config_helpers():
                 #if KCONFIG_IS_ENABLED(CONFIG_UNDEFINED) != 0
                 #error CONFIG_UNDEFINED should be disabled
                 #endif
-                #if KCONFIG_IS_ENABLED(CONFIG_ZERO) != 0
-                #error CONFIG_ZERO should not be treated as enabled
-                #endif
-                #if KCONFIG_IS_ENABLED(ALT_ENABLED) != 1
-                #error custom configuration prefixes should work
+                #ifndef KCONFIG_MACROS_EMBEDDED
+                # if KCONFIG_IS_ENABLED(CONFIG_ZERO) != 0
+                #  error CONFIG_ZERO should not be treated as enabled
+                # endif
+                # if KCONFIG_IS_ENABLED(ALT_ENABLED) != 1
+                #  error custom configuration prefixes should work
+                # endif
                 #endif
 
                 #if KCONFIG_TRISTATE(CONFIG_ENABLED) != KCONFIG_TRISTATE_BUILTIN
@@ -3489,20 +3738,38 @@ def test_c_config_helpers():
 
         result = subprocess.run(
             [compiler, "-std=c99", "-Wall", "-Werror", "-I", tmpdir,
-             "-I", os.path.dirname(os.path.abspath(__file__)), source,
-             "-o", executable],
+             source, "-o", executable],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             universal_newlines=True)
         verify(result.returncode == 0,
-               "C configuration helper compilation failed:\n{}"
+               "C configuration macros compilation failed:\n{}"
                .format(result.stdout))
         if result.returncode == 0:
             result = subprocess.run(
                 [executable], stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=True)
             verify(result.returncode == 0,
-                   "C configuration helper executable failed:\n{}"
+                   "C configuration macros executable failed:\n{}"
                    .format(result.stdout))
+
+        embedded_executable = os.path.join(tmpdir, "embedded-helper-test")
+        result = subprocess.run(
+            [compiler, "-std=c99", "-Wall", "-Werror",
+             "-DKCONFIG_MACROS_EMBEDDED", "-I", tmpdir, source,
+             "-o", embedded_executable],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        verify(result.returncode == 0,
+               "embedded C configuration macros compilation failed:\n{}"
+               .format(result.stdout))
+        if result.returncode == 0:
+            result = subprocess.run(
+                [embedded_executable], stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, universal_newlines=True)
+            verify(result.returncode == 0,
+                   "embedded C configuration macros executable failed:\n{}"
+                   .format(result.stdout))
+
 
 
 def test_cmake_module():
@@ -3512,13 +3779,56 @@ def test_cmake_module():
         return
 
     source_dir = os.path.join("Kconfiglib", "tests", "cmake")
-    with tempfile.TemporaryDirectory() as build_dir:
-        result = subprocess.run(
-            ["cmake", "-S", source_dir, "-B", build_dir],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            universal_newlines=True)
-        verify(result.returncode == 0,
-               "CMake module test failed:\n{}".format(result.stdout))
+    generator_args = []
+    if shutil.which("ninja") is not None:
+        generator_args.extend(["-G", "Ninja"])
+
+    for extra_macros in ("NONE", "EMBED", "COPY"):
+        with tempfile.TemporaryDirectory() as build_dir:
+            configure_command = ["cmake"] + generator_args + [
+                "-S", source_dir,
+                "-B", build_dir,
+                "-DKCONFIG_TEST_EXTRA_MACROS={}".format(extra_macros),
+            ]
+            result = subprocess.run(
+                configure_command,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                universal_newlines=True)
+            verify(
+                result.returncode == 0,
+                "CMake module test failed for {}:\n{}"
+                .format(extra_macros, result.stdout))
+            if result.returncode == 0:
+                result = subprocess.run(
+                    ["cmake", "--build", build_dir,
+                     "--target", "test_config_generate",
+                     "boot_config_generate"],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    universal_newlines=True)
+                verify(
+                    result.returncode == 0,
+                    "CMake generation target test failed for {}:\n{}"
+                    .format(extra_macros, result.stdout))
+
+    for cache_args, expected_error in (
+        (("-DKCONFIG_TEST_RESERVED_NAME=ON",),
+         "NAME 'kconfig_macros' is reserved"),
+        (("-DKCONFIG_TEST_EXTRA_MACROS=INVALID",),
+         "Unknown EXTRA_MACROS 'INVALID'"),
+    ):
+        with tempfile.TemporaryDirectory() as failure_build_dir:
+            failure_command = ["cmake"] + generator_args + [
+                "-S", source_dir,
+                "-B", failure_build_dir,
+            ] + list(cache_args)
+            result = subprocess.run(
+                failure_command,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                universal_newlines=True)
+            verify(
+                result.returncode != 0 and expected_error in result.stdout,
+                "CMake accepted invalid enum settings {}:\n{}"
+                .format(" ".join(cache_args), result.stdout))
 
 
 def rm_configs():

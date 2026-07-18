@@ -32,10 +32,18 @@ Generate build inputs
 .. code-block:: console
 
    $ genconfig --header-path build/config.h Kconfig
+   $ genconfig --header-path build/config.h --kconfig-extra-macros build/kconfig_macros.h Kconfig
+   $ genconfig --header-path build/config.h --embed-kconfig-extra-macros Kconfig
    $ genconfig --config-out build/auto.conf Kconfig
    $ genconfig --cmake-out build/kconfig.cmake Kconfig
 
-The header uses ``CONFIG_*`` macros in the Linux ``autoconf.h`` style.
+The configuration header uses ``CONFIG_*`` macros in the Linux ``autoconf.h``
+style. ``--kconfig-extra-macros`` copies ``kconfig_macros.h`` into a
+project-controlled include directory without rewriting an unchanged copy.
+``--embed-kconfig-extra-macros`` instead appends the macros after the generated
+configuration definitions, producing a self-contained header.
+``genconfig`` always writes the configuration header, so pass
+``--header-path`` whenever the other outputs are redirected.
 ``--config-out`` is helpful when a Makefile needs a normalized, complete
 configuration rather than a possibly outdated source ``.config``. The CMake
 file contains ``set()`` commands and can be loaded directly:
@@ -67,10 +75,16 @@ the directory to ``CMAKE_MODULE_PATH``, include ``Kconfig``, then configure:
      KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
      CONFIG "${CMAKE_BINARY_DIR}/.config")
 
-It produces the header and CMake include file, tracks sourced Kconfig files,
-and exposes targets such as ``kconfig_generate``, ``kconfig_menuconfig``, and
-``kconfig_olddefconfig``. The library module docstring contains the complete
-CMake walkthrough.
+It produces the configuration header and CMake include file, tracks sourced
+Kconfig files, and exposes targets such as ``kconfig_generate``,
+``kconfig_menuconfig``, and ``kconfig_olddefconfig``.
+The optional ``EXTRA_MACROS`` argument is validated against the choices
+``NONE`` (the default), ``EMBED``, and ``COPY``. Pass
+``EXTRA_MACROS EMBED`` for a self-contained configuration header or
+``EXTRA_MACROS COPY`` for a copied ``kconfig_macros.h``.
+``KCONFIG_INCLUDE_DIR`` lists the directories
+required by the selected value.
+The library module docstring contains the complete CMake walkthrough.
 
 Environment and preprocessing
 ------------------------------

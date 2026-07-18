@@ -9,8 +9,8 @@
  * C parsing. Use them only for declarations or APIs that do not exist in all
  * configurations, and enclose every selected token sequence in parentheses.
  */
-#ifndef KCONFIGLIB_H
-#define KCONFIGLIB_H
+#ifndef KCONFIG_MACROS_H
+#define KCONFIG_MACROS_H
 
 #define KCONFIGLIB_ARG_PLACEHOLDER_1 0,
 #define KCONFIGLIB_TAKE_SECOND_ARG(_ignored, value, ...) value
@@ -117,4 +117,4 @@
 #define KCONFIG_IF_ENABLED(option, code) \
     KCONFIG_SELECT_TRISTATE(option, code, code, ())
 
-#endif /* KCONFIGLIB_H */
+#endif /* KCONFIG_MACROS_H */

@@ -126,8 +126,11 @@ available in the C tools.
 
 ``genconfig`` is intended to be run at build time. It generates a C header from
 the configuration and (optionally) information that can be used to rebuild only
-files that reference Kconfig symbols that have changed value. It can also
-generate a CMake include file with ``--cmake-out``.
+files that reference Kconfig symbols that have changed value. It can also copy
+the companion ``kconfig_macros.h`` header with ``--kconfig-extra-macros``,
+embed those macros in the generated configuration header with
+``--embed-kconfig-extra-macros``, and generate a CMake include file with
+``--cmake-out``.
 
 All utilities run under Python 3.
 
@@ -247,6 +250,29 @@ outdated ``.config``.
 If you use ``--sync-deps`` to generate incremental build information, you can
 include ``deps/auto.conf`` instead, which is also a full configuration file.
 
+To make the extra C macros available from a Make build without depending on
+the location of Kconfiglib's source or installed data files, generate the
+configuration and macros headers together::
+
+  genconfig --header-path build/config.h \
+            --kconfig-extra-macros build/kconfig_macros.h \
+            --config-out build/auto.conf Kconfig
+
+The command only rewrites outputs whose contents changed, so it can be used by
+a normal stamp-based Make rule. Add ``build`` to the compiler include path,
+include ``config.h`` first and then ``kconfig_macros.h``, and include
+``build/auto.conf`` from the Makefile when the resolved values are also needed
+by Make.
+
+For a single self-contained C header, embed the extra macros instead::
+
+  genconfig --header-path build/config.h \
+            --embed-kconfig-extra-macros Kconfig
+
+Sources then only need to include ``config.h``. The extra macros are appended
+after the generated configuration definitions, and the combined header is still
+left untouched when its contents have not changed.
+
 Using the configuration from CMake
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -281,30 +307,46 @@ directory. Add that directory to ``CMAKE_MODULE_PATH`` and call
     KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
     CONFIG "${CMAKE_BINARY_DIR}/.config")
 
-The wrapper generates the header and CMake variables in the build directory
-and imports the generated symbol variables (plus ``KCONFIG_SYMBOLS``) into
-the current CMake scope, so it works regardless of the configured symbol
-prefix. If the configuration file does not exist, it is created once with
-default values; an existing configuration file is used as input and is never
-rewritten by the configure step (the normalized, full configuration is
-written alongside the other generated files). The wrapper also adds a
-``kconfig_generate`` target, along with ``kconfig_menuconfig``,
+The wrapper always generates the configuration header and CMake variables in
+the build directory and imports the generated symbol variables (plus
+``KCONFIG_SYMBOLS``) into the current CMake scope, so it works regardless of
+the configured symbol prefix. The optional ``EXTRA_MACROS`` argument controls
+the extra C macros and accepts ``NONE``, ``EMBED``, or ``COPY``. It defaults
+to ``NONE``. Pass ``EMBED`` to append the extra C macros to the configuration
+header, or ``COPY`` to generate ``kconfig_macros.h`` in a private include
+directory. For example, call ``kconfig_configure(... EXTRA_MACROS EMBED)``. In
+``EMBED`` mode, ``KCONFIG_EXTRA_MACROS_FILE`` equals ``KCONFIG_HEADER_FILE``;
+in ``COPY`` mode, it names the copied macros header; and in ``NONE`` mode, it
+is empty. ``KCONFIG_INCLUDE_DIR`` lists exactly the include directories
+required by the selected value.
+If the configuration file does not exist, it is created once with default
+values; an existing configuration file
+is used as input and is never rewritten by the configure step (the normalized,
+full configuration is written alongside the other generated files). The
+wrapper also adds a ``kconfig_generate`` target, along with
+``kconfig_menuconfig``,
 ``kconfig_guiconfig``, ``kconfig_oldconfig``, and ``kconfig_olddefconfig``
 targets. The optional ``BINARY_DIR``, ``NAME``, and ``PYTHON_EXECUTABLE``
 arguments customize output paths, target names, and the Python interpreter.
+The configuration name ``kconfig_macros`` is reserved only in ``COPY`` mode.
 Changes to the configuration, or to any Kconfig file sourced by the top-level
 Kconfig, cause CMake to re-run automatically.
 
-Useful helper macros
-~~~~~~~~~~~~~~~~~~~~
+Targets that compile configured C sources can consume the headers directly::
 
-Kconfiglib ships ``kconfiglib.h`` for using Boolean and tristate
+  target_include_directories(my_target PRIVATE "${KCONFIG_INCLUDE_DIR}")
+  add_dependencies(my_target "${KCONFIG_TARGET}")
+
+Useful configuration macros
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Kconfiglib ships ``kconfig_macros.h`` for using Boolean and tristate
 configuration symbols in C and C preprocessor expressions. Include the
 generated configuration header first, then add the directory containing
-``kconfiglib.h`` to the compiler's include search path::
+``kconfig_macros.h`` to the compiler's include search path::
 
   #include "config.h"
-  #include <kconfiglib.h>
+  #include <kconfig_macros.h>
 
   if (KCONFIG_IS_ENABLED(CONFIG_MY_FEATURE))
       start_my_feature();

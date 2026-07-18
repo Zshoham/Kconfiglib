@@ -182,7 +182,11 @@ use the ``CONFIG_`` prefix, and boolean and tristate values are ``y``, ``m``,
 or ``n``, which can be used directly in CMake conditions. The file also
 defines ``KCONFIG_SYMBOLS`` with the names of all generated symbol variables.
 Pass ``--header-path <filename>`` in the same ``genconfig.py`` invocation if
-the sources also need a C header.
+the sources also need a C header. Pass
+``--kconfig-extra-macros <filename>`` to copy ``kconfig_macros.h`` into the
+build's include directory as well, or pass
+``--embed-kconfig-extra-macros`` to append the macros to the generated
+configuration header.
 
 For tighter build-system integration, Kconfiglib ships
 ``cmake/Kconfig.cmake``. Add that directory to ``CMAKE_MODULE_PATH``, include
@@ -196,10 +200,26 @@ the module, and call ``kconfig_configure()`` during CMake configuration:
      KCONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Kconfig"
      CONFIG "${CMAKE_BINARY_DIR}/.config")
 
-This generates a C header and a CMake include file in the build directory and
-imports all generated symbol variables into the calling scope. If ``.config`` does
-not exist, it is initialized with the default configuration. An existing
-``.config`` is treated as input and is not overwritten during configuration.
+This generates a C configuration header and a CMake include file in the build
+directory, and imports all generated symbol variables into the calling scope.
+The optional ``EXTRA_MACROS`` argument controls the extra C macros and accepts
+``NONE``, ``EMBED``, or ``COPY``. It defaults to ``NONE``. Pass ``EMBED`` to
+append the extra C macros to the configuration header, or ``COPY`` to generate
+``kconfig_macros.h`` in a private include directory. For example, call
+``kconfig_configure(... EXTRA_MACROS EMBED)``. ``KCONFIG_INCLUDE_DIR``
+lists exactly the include directories required by the selected value.
+``KCONFIG_HEADER_FILE`` names the configuration header.
+``KCONFIG_EXTRA_MACROS_FILE`` names that same file in ``EMBED`` mode, the
+copied macros header in ``COPY`` mode, and is empty in ``NONE`` mode. If
+``.config`` does not exist, it is initialized with the default configuration.
+An existing ``.config`` is treated as input and is not overwritten during
+configuration.
+Targets that compile configured C sources can use the generated headers with:
+
+.. code-block:: cmake
+
+   target_include_directories(my_target PRIVATE "${KCONFIG_INCLUDE_DIR}")
+   add_dependencies(my_target "${KCONFIG_TARGET}")
 
 The wrapper provides the ``kconfig_generate``, ``kconfig_menuconfig``,
 ``kconfig_guiconfig``, ``kconfig_oldconfig``, and ``kconfig_olddefconfig``
@@ -207,8 +227,9 @@ targets. It also tracks the top-level Kconfig file, sourced Kconfig files, and
 ``.config`` so that CMake automatically reconfigures when any of them changes.
 The optional ``BINARY_DIR``, ``NAME``, and ``PYTHON_EXECUTABLE`` arguments
 customize the output directory, target-name prefix, and Python interpreter,
-respectively. The ``kconfig_init()`` function is an alias for
-``kconfig_configure()``.
+respectively. The configuration name ``kconfig_macros`` is reserved only when
+``EXTRA_MACROS`` is ``COPY``. The ``kconfig_init()`` function is an
+alias for ``kconfig_configure()``.
 
 First configure the project as usual. For example, with a build directory
 named ``build``:
@@ -224,8 +245,9 @@ below. These commands work with any CMake generator, including Make and Ninja.
 cmake --build build --target kconfig_generate
 ------------------------------------------------
 
-This target regenerates the C header, CMake include file, and normalized full
-configuration from ``.config``. Normal project targets that use these generated
+This target regenerates the C configuration header, any extra macros output
+selected by ``EXTRA_MACROS``, the CMake include file, and the normalized
+full configuration from ``.config``. Normal project targets that use these
 files should depend on the target named by the ``KCONFIG_TARGET`` variable set
 by ``kconfig_configure()``.
 
@@ -1587,7 +1609,7 @@ class Kconfig(object):
         """
         load_allconfig(self, filename)
 
-    def write_autoconf(self, filename=None, header=None):
+    def write_autoconf(self, filename=None, header=None, footer=None):
         r"""
         Writes out symbol values as a C header file, matching the format used
         by include/generated/autoconf.h in the kernel.
@@ -1618,6 +1640,10 @@ class Kconfig(object):
           will be used if it was set, and no header otherwise. See the
           Kconfig.header_header attribute.
 
+        footer (default: None):
+          Text inserted verbatim at the end of the file. No text is appended
+          if this is None (the default).
+
         Returns a string with a message saying that the header got saved, or
         that there were no changes to it. This is meant to reduce boilerplate
         in tools, which can do e.g. print(kconf.write_autoconf()).
@@ -1626,13 +1652,15 @@ class Kconfig(object):
             filename = os.getenv("KCONFIG_AUTOHEADER",
                                  "include/generated/autoconf.h")
 
-        if self._write_if_changed(filename, self._autoconf_contents(header)):
+        if self._write_if_changed(
+                filename, self._autoconf_contents(header, footer)):
             return "Kconfig header saved to '{}'".format(filename)
         return "No change to Kconfig header in '{}'".format(filename)
 
-    def _autoconf_contents(self, header):
+    def _autoconf_contents(self, header, footer=None):
         # write_autoconf() helper. Returns the contents to write as a string,
-        # with 'header' or KCONFIG_AUTOHEADER_HEADER at the beginning.
+        # with 'header' or KCONFIG_AUTOHEADER_HEADER at the beginning and
+        # 'footer' at the end.
 
         if header is None:
             header = self.header_header
@@ -1670,6 +1698,9 @@ class Kconfig(object):
 
                 add("#define {}{} {}\n"
                     .format(self.config_prefix, sym.name, val))
+
+        if footer is not None:
+            add(footer)
 
         return "".join(chunks)
 
